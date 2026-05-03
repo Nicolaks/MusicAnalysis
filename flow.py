@@ -46,4 +46,7 @@ def run():
 
 if __name__ == "__main__":
     run()
-    query("SELECT artist_name, album_name, album_release_date, track_name, track_views FROM tracks_flat ORDER BY RANDOM() LIMIT 100")
+    #query("SELECT artist_name, album_name, album_release_date, track_name, track_views FROM tracks_flat ORDER BY RANDOM() LIMIT 100")
+    #query("SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'main' ORDER BY table_name, ordinal_position")
+    #query("DROP TABLE isrc_data")
+    #query("SELECT COUNT(*) FROM isrc_data WHERE isrc IS NOT NULL")

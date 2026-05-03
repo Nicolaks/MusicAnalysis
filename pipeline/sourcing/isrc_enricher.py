@@ -2,8 +2,11 @@ import time
 import logging
 import duckdb
 import requests
+import re
 
 from pathlib import Path
+from unidecode import unidecode
+from rapidfuzz import fuzz
 
 logger = logging.getLogger(__name__)
 
@@ -20,28 +23,116 @@ CREATE TABLE IF NOT EXISTS isrc_data (
     release_year      INTEGER,
     isrc              VARCHAR,
     deezer_track_id   BIGINT,
-    deezer_preview_url VARCHAR
+    deezer_preview_url VARCHAR,
+    match_strategy     VARCHAR
 );
 """
 
-def _fetch_deezer(track_name: str, artist_name: str) -> dict | None:
+def _normalize(text: str) -> str:
+    text = unidecode(text).lower()
+    text = re.sub(r"[^\w\s]", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+def _clean_title(title: str) -> str:
+    
+    title = unidecode(title.lower())
+    title = re.sub(r"\(.*?\)|\[.*?\]|\{.*?\}", "", title)
+    
+    blacklist = [
+        "freestyle", "remix", "version", "radio",
+        "oklm", "booska", "planete rap", "colors",
+        "live", "clip", "demo", "extrait", "inedit"
+    ]
+    
+    for word in blacklist:
+        title = re.sub(rf"\b{word}\b", "", title)
+    
+    title = re.sub(r"[^\w\s]", " ", title)
+
+    return re.sub(r"\s+", " ", title).strip()
+
+def _deezer_search(q: str, limit: int = 5) -> list[dict]:
     try:
         resp = requests.get(
             f"{DEEZER_BASE}/search",
-            params={"q": f'track:"{track_name}" artist:"{artist_name}"', "limit": 1},
+            params={"q": q, "limit": limit},
             timeout=10,
         )
         resp.raise_for_status()
-        data = resp.json().get("data", [])
-        if data:
-            hit = data[0]
-            return {
-                "isrc":               hit.get("isrc"),
-                "deezer_track_id":    hit.get("id"),
-                "deezer_preview_url": hit.get("preview"),
-            }
+        return resp.json().get("data", [])
     except requests.RequestException as e:
-        logger.warning("Deezer erreur [%s - %s] : %s", artist_name, track_name, e)
+        logger.warning("    Deezer erreur [q=%s] : %s", q, e)
+        return []
+
+def _extract(hit: dict, strategy: str) -> dict:
+    return {
+        "isrc":               hit.get("isrc"),
+        "deezer_track_id":    hit.get("id"),
+        "deezer_preview_url": hit.get("preview"),
+        "match_strategy":     strategy,
+    }
+
+def _artist_matches(hit: dict, artist_name: str) -> bool:
+    deezer_artist = _normalize(hit.get("artist", {}).get("name", ""))
+    target = _normalize(artist_name)
+    return (
+        target in deezer_artist or deezer_artist in target or fuzz.ratio(target, deezer_artist) > 95   
+    )
+
+def _fetch_deezer(track_name: str, artist_name: str) -> dict | None:
+
+    results = _deezer_search(f'track:"{track_name}" artist:"{artist_name}"')
+    for hit in results:
+        if hit.get("isrc"):
+            logger.info("    🎯 Match exact")
+            return _extract(hit, "exact")
+
+    q2 = f"{_normalize(track_name)} {_normalize(artist_name)}"
+    results = _deezer_search(q2)
+    for hit in results:
+        if hit.get("isrc") and _artist_matches(hit, artist_name):
+            logger.info("    🎯 Match souple (sans accents)")
+            return _extract(hit, "souple")
+
+    clean   = _clean_title(track_name)
+    if clean != track_name:
+        q3      = f'track:"{clean}" artist:"{artist_name}"'
+        results = _deezer_search(q3)
+        for hit in results:
+            if hit.get("isrc") and _artist_matches(hit, artist_name):
+                logger.info("    🎯 Match titre nettoyé")
+                return _extract(hit, "clean_title")
+
+    results = _deezer_search(_normalize(clean or track_name), limit=10)
+    for hit in results:
+        if hit.get("isrc") and _artist_matches(hit, artist_name):
+            logger.info("    🎯 Match titre seul + vérif artiste")
+            return _extract(hit, "titre_seul")
+        
+    results = _deezer_search(_normalize(track_name), limit=20)
+    if results:
+        def _score(hit: dict) -> float:
+            title_score = fuzz.ratio(
+                _normalize(hit.get("title", "")),
+                _normalize(track_name)
+            )
+            artist_score = fuzz.ratio(
+                _normalize(hit.get("artist", {}).get("name", "")),
+                _normalize(artist_name)
+            )
+            return title_score * 0.5 + artist_score * 0.5
+        best = max(results, key=_score)
+        score = _score(best)
+        logger.info("    🔍 Fuzzy best score : %.1f | titre : %s | artiste : %s", score, best.get("title", "?"), best.get("artist", {}).get("name", "?"))
+        if score > 93 and best.get("isrc"):
+            logger.info("    🎯 Match fuzzy (score=%.1f)", score)
+            return _extract(best, f"fuzzy_{score:.0f}")
+        else:
+            logger.warning("    ❌ Fuzzy trop bas (%.1f) | meilleur candidat : %s — %s",
+                           score,
+                           best.get("artist", {}).get("name", "?"),
+                           best.get("title", "?"))
+
     return None
 
 def run(db_path: Path = DB_PATH) -> None:
@@ -52,15 +143,20 @@ def run(db_path: Path = DB_PATH) -> None:
     con = duckdb.connect(str(db_path))
     con.execute(DDL_ISRC)
 
-    # Tracks déjà enrichis → skip
+    existing_cols = [r[0] for r in con.execute("DESCRIBE isrc_data").fetchall()]
+    if "match_strategy" not in existing_cols:
+        con.execute("ALTER TABLE isrc_data ADD COLUMN match_strategy VARCHAR")
+
     already = con.execute("SELECT COUNT(*) FROM isrc_data WHERE isrc IS NOT NULL").fetchone()[0]
     logger.info("Cache isrc_data : %d track(s) déjà enrichis", already)
 
-    # Récupère tous les tracks de tracks_flat pas encore dans isrc_data
     rows = con.execute("""
         SELECT track_id, track_name, artist_name, album_name, album_release_year
         FROM tracks_flat
-        WHERE track_id NOT IN (SELECT track_id FROM isrc_data)
+        WHERE track_id NOT IN (
+            SELECT track_id FROM isrc_data
+            WHERE isrc IS NOT NULL
+            )
         ORDER BY artist_name, album_release_year, track_name
     """).fetchall()
 
@@ -77,24 +173,18 @@ def run(db_path: Path = DB_PATH) -> None:
 
         if result and result.get("isrc"):
             con.execute(
-                "INSERT OR REPLACE INTO isrc_data VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO isrc_data VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
-                    track_id,
-                    track_name,
-                    artist_name,
-                    album_name,
-                    release_year,
-                    result["isrc"],
-                    result["deezer_track_id"],
-                    result["deezer_preview_url"],
+                    track_id, track_name, artist_name, album_name, release_year,
+                    result["isrc"], result["deezer_track_id"],
+                    result["deezer_preview_url"], result["match_strategy"],
                 ],
             )
             enriched += 1
-            logger.info("    ✅ ISRC : %s | Deezer id : %s", result["isrc"], result["deezer_track_id"])
+            logger.info("    ✅ ISRC : %s | stratégie : %s", result["isrc"], result["match_strategy"])
         else:
-            # Insère quand même une ligne avec isrc NULL pour ne pas retraiter à chaque fois
             con.execute(
-                "INSERT OR REPLACE INTO isrc_data VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL)",
+                "INSERT OR REPLACE INTO isrc_data VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, 'not_found')",
                 [track_id, track_name, artist_name, album_name, release_year],
             )
             failed += 1
@@ -108,7 +198,6 @@ def run(db_path: Path = DB_PATH) -> None:
     logger.info("=" * 60)
     logger.info("Terminé : %d/%d ISRC récupérés | %d introuvables", enriched, total, failed)
     logger.info("=" * 60)
-
 
 if __name__ == "__main__":
     import logging
