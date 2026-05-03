@@ -16,3 +16,5 @@ shap
 uvicorn
 python-dotenv
 joblib
+beautifulsoup4
+lyricsgenius
