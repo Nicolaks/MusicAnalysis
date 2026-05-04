@@ -6,6 +6,7 @@ from pipeline.sourcing import genius_explorer
 from pipeline.sourcing import deezer_enricher
 from pipeline.sourcing import merge_ranking
 from pipeline.sourcing import samples_downloader
+from pipeline.sourcing import kworb_streams
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", handlers=[logging.FileHandler("logs/flow.log", encoding="utf-8"), logging.StreamHandler()])
 logger = logging.getLogger(__name__)
@@ -51,15 +52,21 @@ def download_samples():
     logger.info("Lancement du téléchargement des extraits pour analyse")
     samples_downloader.run(db_path=DB_PATH)
     logger.info("Téléchargement terminé")
+    
+def get_streams():
+    logger.info("Lancement de la recherche des ID Spotify pour obtenir les streams Kworb")
+    kworb_streams.run(db_path=DB_PATH)
+    logger.info("Recherche terminée")
         
 def run():
     #run_extract_genuis()
     #run_extract_deezer()
     #download_samples()
-    merge_with_ranking()
+    #merge_with_ranking()
+    get_streams()
 
 if __name__ == "__main__":
-    #query("DROP TABLE ranking_data")
+    query("DROP TABLE kworb_streams")
     run()
     #query("SELECT artist_name, album_name, album_release_date, track_name, track_views FROM tracks_flat ORDER BY RANDOM() LIMIT 100")
     #query("SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'main' ORDER BY table_name, ordinal_position")
@@ -68,6 +75,7 @@ if __name__ == "__main__":
     #query("COPY (SELECT * FROM (SUMMARIZE tracks_flat)) TO 'audit_tracks_flat.csv' (HEADER, DELIMITER ',')")
     #query("COPY (SELECT * FROM (SUMMARIZE isrc_data)) TO 'audit_isrc_data.csv' (HEADER, DELIMITER ',')")
     #query("COPY (SELECT * FROM (SUMMARIZE samples_index)) TO 'audit_samples_indexe.csv' (HEADER, DELIMITER ',')")
-    query("COPY (SELECT * FROM (SUMMARIZE ranking_data)) TO 'audit_ranking_data.csv' (HEADER, DELIMITER ',')")
-    query("COPY (SELECT * FROM ranking_data) TO 'ranking_complet.csv' (HEADER, DELIMITER ',')") 
+    #query("COPY (SELECT * FROM (SUMMARIZE ranking_data)) TO 'audit_ranking_data.csv' (HEADER, DELIMITER ',')")
+    #query("COPY (SELECT * FROM ranking_data) TO 'ranking_complet.csv' (HEADER, DELIMITER ',')") 
     #query("SHOW TABLES")
+    query("COPY (SELECT * FROM kworb_streams) TO 'audit_kworb_streams.csv' (HEADER, DELIMITER ',')")
