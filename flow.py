@@ -55,11 +55,19 @@ def download_samples():
 def run():
     #run_extract_genuis()
     #run_extract_deezer()
-    download_samples()
+    #download_samples()
+    merge_with_ranking()
 
 if __name__ == "__main__":
+    #query("DROP TABLE ranking_data")
     run()
     #query("SELECT artist_name, album_name, album_release_date, track_name, track_views FROM tracks_flat ORDER BY RANDOM() LIMIT 100")
     #query("SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'main' ORDER BY table_name, ordinal_position")
-    #query("DROP TABLE isrc_data")
+    
     #query("SELECT COUNT(*) FROM isrc_data WHERE isrc IS NOT NULL")
+    #query("COPY (SELECT * FROM (SUMMARIZE tracks_flat)) TO 'audit_tracks_flat.csv' (HEADER, DELIMITER ',')")
+    #query("COPY (SELECT * FROM (SUMMARIZE isrc_data)) TO 'audit_isrc_data.csv' (HEADER, DELIMITER ',')")
+    #query("COPY (SELECT * FROM (SUMMARIZE samples_index)) TO 'audit_samples_indexe.csv' (HEADER, DELIMITER ',')")
+    query("COPY (SELECT * FROM (SUMMARIZE ranking_data)) TO 'audit_ranking_data.csv' (HEADER, DELIMITER ',')")
+    query("COPY (SELECT * FROM ranking_data) TO 'ranking_complet.csv' (HEADER, DELIMITER ',')") 
+    #query("SHOW TABLES")
