@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS isrc_data (
     isrc              VARCHAR,
     deezer_track_id   BIGINT,
     deezer_preview_url VARCHAR,
-    match_strategy     VARCHAR
+    match_strategy     VARCHAR,
+    deezer_duration     INTEGER,
+    deezer_rank         BIGINT,
+    deezer_explicit     BOOLEAN
 );
 """
 
@@ -70,6 +73,9 @@ def _extract(hit: dict, strategy: str) -> dict:
         "deezer_track_id":    hit.get("id"),
         "deezer_preview_url": hit.get("preview"),
         "match_strategy":     strategy,
+        "deezer_duration":    hit.get("duration"),
+        "deezer_rank":        hit.get("rank"),
+        "deezer_explicit":    hit.get("explicit_lyrics"),
     }
 
 def _artist_matches(hit: dict, artist_name: str) -> bool:
@@ -173,19 +179,20 @@ def run(db_path: Path = DB_PATH) -> None:
 
         if result and result.get("isrc"):
             con.execute(
-                "INSERT OR REPLACE INTO isrc_data VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO isrc_data VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     track_id, track_name, artist_name, album_name, release_year,
                     result["isrc"], result["deezer_track_id"],
                     result["deezer_preview_url"], result["match_strategy"],
+                    result["deezer_duration"], result["deezer_rank"], result["deezer_explicit"],
                 ],
             )
             enriched += 1
             logger.info("    ✅ ISRC : %s | stratégie : %s", result["isrc"], result["match_strategy"])
         else:
             con.execute(
-                "INSERT OR REPLACE INTO isrc_data VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, 'not_found')",
-                [track_id, track_name, artist_name, album_name, release_year],
+                "INSERT OR REPLACE INTO isrc_data VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [track_id, track_name, artist_name, album_name, release_year, None, None, None, None, None, None, None],
             )
             failed += 1
             logger.warning("    ❌ ISRC introuvable")
