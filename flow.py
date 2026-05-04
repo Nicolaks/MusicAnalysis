@@ -3,7 +3,9 @@ import duckdb
 
 from pathlib import Path
 from pipeline.sourcing import genius_explorer
-from pipeline.sourcing import isrc_enricher
+from pipeline.sourcing import deezer_enricher
+from pipeline.sourcing import merge_ranking
+from pipeline.sourcing import samples_downloader
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", handlers=[logging.FileHandler("logs/flow.log", encoding="utf-8"), logging.StreamHandler()])
 logger = logging.getLogger(__name__)
@@ -37,12 +39,23 @@ def run_extract_genuis():
     
 def run_extract_deezer():
     logger.info("Lancement de l'extraction Deezer")
-    isrc_enricher.run(db_path=DB_PATH)
+    deezer_enricher.run(db_path=DB_PATH)
     logger.info("Extraction Deezer terminée")
     
+def merge_with_ranking():
+    logger.info("Lancement du merge sur les ranking")
+    merge_ranking.run(db_path=DB_PATH)
+    logger.info("Merge Ranking terminé")
+    
+def download_samples():
+    logger.info("Lancement du téléchargement des extraits pour analyse")
+    samples_downloader.run(db_path=DB_PATH)
+    logger.info("Téléchargement terminé")
+        
 def run():
     #run_extract_genuis()
-    run_extract_deezer()
+    #run_extract_deezer()
+    download_samples()
 
 if __name__ == "__main__":
     run()
