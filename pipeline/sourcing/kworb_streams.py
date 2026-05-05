@@ -4,20 +4,17 @@ kworb_streams.py
 Récupère les streams Spotify depuis Kworb.net pour chaque artiste
 de la BDD et les stocke dans une table kworb_streams.
 
-Flux :
-    artists de tracks_flat
-        → search Spotify ID artiste (API Spotify)
-        → scraping kworb.net/spotify/artist/{id}_songs.html
-        → matching via Spotify track ID ou fuzzy titre
-        → kworb_streams
+Flux de données :
+    1. Extraction des artistes depuis la table 'tracks_flat'.
+    2. Résolution de l'ID Spotify de l'artiste via l'API Spotify.
+    3. Scraping de la page dédiée sur Kworb.net (artist/{id}_songs.html).
+    4. Matching des titres BDD vs Kworb par fuzzy matching (Rapidfuzz).
+    5. Stockage des statistiques de streams dans la table 'kworb_streams'.
 
 Table kworb_streams :
-    track_id, artist_name, track_name,
+    track_id (PK), artist_name, track_name,
     spotify_track_id, streams, daily_streams,
-    is_feature, last_updated
-
-Prérequis :
-    pip install requests beautifulsoup4 duckdb spotipy rapidfuzz python-dotenv
+    is_feature, kworb_match_str, match_score, last_updated
 """
 
 import os
@@ -61,12 +58,12 @@ CREATE TABLE IF NOT EXISTS kworb_streams (
 );
 """
 
-
 # ─────────────────────────────────────────────
 # Client Spotify (pour résoudre l'ID artiste)
 # ─────────────────────────────────────────────
 
 def _get_spotify() -> spotipy.Spotify | None:
+    """Initialise le client Spotify avec les identifiants API."""
     if not CLIENT_ID or not CLIENT_SECRET:
         logger.warning("Credentials Spotify absents — résolution ID artiste désactivée")
         return None
@@ -75,7 +72,7 @@ def _get_spotify() -> spotipy.Spotify | None:
 
 
 def _get_spotify_artist_id(sp: spotipy.Spotify, artist_name: str) -> str | None:
-    """Résout le nom d'un artiste en ID Spotify."""
+    """Interroge l'API Spotify pour obtenir l'ID interne d'un artiste."""
     try:
         results = sp.search(q=artist_name, type="artist", limit=1)
         items   = results["artists"]["items"]
@@ -86,7 +83,6 @@ def _get_spotify_artist_id(sp: spotipy.Spotify, artist_name: str) -> str | None:
     except Exception as e:
         logger.warning(" ❌  Impossible de résoudre l'ID Spotify pour %s : %s", artist_name, e)
     return None
-
 
 # ─────────────────────────────────────────────
 # Scraping Kworb
@@ -115,7 +111,7 @@ def _scrape_kworb(spotify_artist_id: str, artist_name: str) -> list[dict]:
     soup    = BeautifulSoup(resp.text, "html.parser")
     songs   = []
 
-    # Récupère la date de mise à jour
+    # Extraction de la date de mise à jour globale du rapport Kworb
     last_updated = None
     for text in soup.stripped_strings:
         if re.match(r"\d{4}/\d{2}/\d{2}", text):
@@ -144,6 +140,7 @@ def _scrape_kworb(spotify_artist_id: str, artist_name: str) -> list[dict]:
         title            = raw_title.lstrip("* ").strip()
 
         def _parse_int(val: str) -> int | None:
+            """Nettoie les séparateurs de milliers pour convertir en entier."""
             try:
                 return int(val.replace(",", "").replace(".", "").strip())
             except ValueError:
@@ -170,6 +167,7 @@ def _scrape_kworb(spotify_artist_id: str, artist_name: str) -> list[dict]:
 # ─────────────────────────────────────────────
 
 def _normalize(text: str) -> str:
+    """Prépare le texte pour le matching (retrait feat, parenthèses, accents)."""
     try:
         from unidecode import unidecode
         text = unidecode(text)
@@ -180,13 +178,10 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _match_track(
-    track_name: str,
-    kworb_songs: list[dict],
-) -> dict | None:
+def _match_track(track_name: str, kworb_songs: list[dict]) -> dict | None:
     """
-    Tente de matcher un track de la BDD avec un titre Kworb.
-    Retourne le dict Kworb matché ou None.
+    Associe un titre de la BDD à un titre scrapé via l'algorithme Token Sort Ratio.
+    C'est nécessaire car les titres Kworb diffèrent souvent de la BDD (titres courts vs longs).
     """
     if not kworb_songs:
         return None
@@ -215,10 +210,11 @@ def _match_track(
 
 
 # ─────────────────────────────────────────────
-# Run
+# Exécution Principale
 # ─────────────────────────────────────────────
 
 def run(db_path: Path = DB_PATH) -> None:
+    """Boucle principale : parcourt les artistes, scrape Kworb et met à jour la BDD."""
     logger.info("=" * 60)
     logger.info("Démarrage enrichissement streams Kworb")
     logger.info("=" * 60)
@@ -316,6 +312,7 @@ def run(db_path: Path = DB_PATH) -> None:
 
 
 if __name__ == "__main__":
+    # Configuration des logs (Fichier + Console)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
