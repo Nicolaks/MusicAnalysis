@@ -161,8 +161,7 @@ def run(db_path: Path = DB_PATH) -> None:
         FROM tracks_flat
         WHERE track_id NOT IN (
             SELECT track_id FROM isrc_data
-            WHERE isrc IS NOT NULL
-            )
+        )
         ORDER BY artist_name, album_release_year, track_name
     """).fetchall()
 
