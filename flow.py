@@ -7,6 +7,7 @@ from pipeline.sourcing import deezer_enricher
 from pipeline.sourcing import merge_ranking
 from pipeline.sourcing import samples_downloader
 from pipeline.sourcing import kworb_streams
+from pipeline.nlp import audio_features
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", handlers=[logging.FileHandler("logs/flow.log", encoding="utf-8"), logging.StreamHandler()])
 logger = logging.getLogger(__name__)
@@ -21,6 +22,8 @@ ARTISTS = [
     "Orelsan",
     "Booba",
     "SCH",
+    "PNL",
+    "NISKA",
 ]
 
 def query(sql: str) -> None:
@@ -57,25 +60,39 @@ def get_streams():
     logger.info("Lancement de la recherche des ID Spotify pour obtenir les streams Kworb")
     kworb_streams.run(db_path=DB_PATH)
     logger.info("Recherche terminée")
+    
+def audio_features_analysis():
+    logger.info("Début de l'analyse des features audio")
+    audio_features.run(db_path=DB_PATH)
+    logger.info("Analyse des features audio terminée")
         
 def run():
-    #run_extract_genuis()
-    #run_extract_deezer()
-    #download_samples()
-    #merge_with_ranking()
+    run_extract_genuis()
+    run_extract_deezer()
+    download_samples()
+    merge_with_ranking()
     get_streams()
+    audio_features_analysis()
+    
+def get_audit_csv(enable: bool):
+    
+    audit_table_list = [
+        "audio_features_local",
+        "kworb_streams",
+        "ranking_data",
+        "samples_index",
+        "isrc_data",
+        "tracks_flat",
+    ]    
+    if enable:
+        for table in audit_table_list:
+            logger.info("Génération du rapport pour la table : {table}")
+            query(f"COPY (SELECT * FROM {table}) TO 'rapports/audit_{table}.csv' (HEADER, DELIMITER ',')")
+            query(f"COPY (SELECT * FROM (SUMMARIZE {table})) TO 'rapports/summarize_audit_{table}.csv' (HEADER, DELIMITER ',')")
+        logger.info("Les rapports ont étés générés dans /rapports")
 
 if __name__ == "__main__":
-    query("DROP TABLE kworb_streams")
-    run()
-    #query("SELECT artist_name, album_name, album_release_date, track_name, track_views FROM tracks_flat ORDER BY RANDOM() LIMIT 100")
-    #query("SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'main' ORDER BY table_name, ordinal_position")
-    
-    #query("SELECT COUNT(*) FROM isrc_data WHERE isrc IS NOT NULL")
-    #query("COPY (SELECT * FROM (SUMMARIZE tracks_flat)) TO 'audit_tracks_flat.csv' (HEADER, DELIMITER ',')")
-    #query("COPY (SELECT * FROM (SUMMARIZE isrc_data)) TO 'audit_isrc_data.csv' (HEADER, DELIMITER ',')")
-    #query("COPY (SELECT * FROM (SUMMARIZE samples_index)) TO 'audit_samples_indexe.csv' (HEADER, DELIMITER ',')")
-    #query("COPY (SELECT * FROM (SUMMARIZE ranking_data)) TO 'audit_ranking_data.csv' (HEADER, DELIMITER ',')")
-    #query("COPY (SELECT * FROM ranking_data) TO 'ranking_complet.csv' (HEADER, DELIMITER ',')") 
+    #query("DROP TABLE kworb_streams")
+    #run()
     #query("SHOW TABLES")
-    query("COPY (SELECT * FROM kworb_streams) TO 'audit_kworb_streams.csv' (HEADER, DELIMITER ',')")
+    get_audit_csv(True)

@@ -216,6 +216,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+rapports/*
 data/samples
 data/*.csv
 data/raw/*.csv
