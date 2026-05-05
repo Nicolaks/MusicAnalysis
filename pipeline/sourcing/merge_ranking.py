@@ -329,6 +329,9 @@ def run(db_path: Path = DB_PATH, csv_dir: Path = CSV_DIR) -> None:
             t.track_release_year
         FROM tracks_flat t
         LEFT JOIN isrc_data i ON t.track_id = i.track_id
+        WHERE t.track_id NOT IN (
+            SELECT track_id FROM ranking_data
+        )
         ORDER BY t.artist_name, t.track_name
     """).fetchall()
 
@@ -423,7 +426,7 @@ def run(db_path: Path = DB_PATH, csv_dir: Path = CSV_DIR) -> None:
         in_spotify = spotify_match_str is not None
 
         if not any([in_apple, in_itunes, in_youtube, in_spotify]):
-            continue
+            logger.info("  ❌ Aucun classement")
 
         in_any += 1
 
