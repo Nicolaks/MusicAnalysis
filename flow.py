@@ -7,7 +7,7 @@ from pipeline.sourcing import deezer_enricher
 from pipeline.sourcing import merge_ranking
 from pipeline.sourcing import samples_downloader
 from pipeline.sourcing import kworb_streams
-from pipeline.nlp import audio_features
+from pipeline.analyse import audio_features
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", handlers=[logging.FileHandler("logs/flow.log", encoding="utf-8"), logging.StreamHandler()])
 logger = logging.getLogger(__name__)
@@ -74,8 +74,7 @@ def run():
     get_streams()
     audio_features_analysis()
     
-def get_audit_csv(enable: bool):
-    
+def get_audit_csv(enable: bool):   
     audit_table_list = [
         "audio_features_local",
         "kworb_streams",
@@ -93,6 +92,6 @@ def get_audit_csv(enable: bool):
 
 if __name__ == "__main__":
     #query("DROP TABLE kworb_streams")
-    #run()
+    run()
     #query("SHOW TABLES")
     get_audit_csv(True)
