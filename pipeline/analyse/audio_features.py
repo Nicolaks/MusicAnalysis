@@ -13,10 +13,6 @@ Features extraites via librosa :
     Timbre      : mfcc_1..13 (13 coefficients cepstraux)
     Structure   : onset_rate (densité des attaques)
     Ambiance    : brightness, warmth, roughness
-
-Usage :
-    python audio_features.py
-    ou appelé depuis flow.py via run()
 """
 
 import logging
@@ -91,9 +87,7 @@ CREATE TABLE IF NOT EXISTS audio_features_local (
 );
 """
 
-KEY_NAMES = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa",
-             "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
-
+KEY_NAMES = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
 
 # ─────────────────────────────────────────────
 # Extraction
