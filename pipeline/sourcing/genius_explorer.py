@@ -44,6 +44,25 @@ CREATE TABLE IF NOT EXISTS tracks_flat (
 );
 """
 
+def _load_artist_meta(db_path: Path, query: str) -> Optional[dict]:
+    """Retourne les métadonnées artiste depuis la BDD, ou None si inconnu."""
+    con = duckdb.connect(str(db_path))
+    try:
+        row = con.execute("""
+            SELECT artist_id, artist_name, artist_image_url,
+                   artist_followers, artist_header_image, artist_url
+            FROM tracks_flat
+            WHERE LOWER(artist_name) = LOWER(?)
+            LIMIT 1
+        """, [query]).fetchone()
+    finally:
+        con.close()
+    if not row:
+        return None
+    return {"id": row[0], "name": row[1], "image_url": row[2],
+            "followers_count": row[3], "header_image_url": row[4], "url": row[5],
+            "albums": [], "loose_tracks": []}
+
 def _get_client() -> lyricsgenius.Genius:
     if not GENIUS_TOKEN:
         raise ValueError("GENIUS_ACCESS_TOKEN manquant dans le .env\n→ https://genius.com/api-clients")
@@ -52,19 +71,33 @@ def _get_client() -> lyricsgenius.Genius:
     genius.retries = 3
     return genius
 
-def _load_existing_track_ids(db_path: Path, artist_id: int) -> set[int]:
-    try:
-        con = duckdb.connect(str(db_path))
-        con.execute(DDL)
-        rows = con.execute(
-            "SELECT track_id FROM tracks_flat WHERE artist_id = ?", [artist_id]
-        ).fetchall()
-        con.close()
-        ids = {row[0] for row in rows}
-        logger.info(" Cache BDD : %d track(s) déjà présents pour artist_id=%d", len(ids), artist_id)
-        return ids
-    except Exception:
-        return set()
+def _load_existing_tracks(db_path: Path, artist_id: int) -> tuple[dict[int, bool], set[int]]:
+    """
+    Retourne ({track_id: has_lyrics}, {album_id_complets})
+    Un album est "complet" si tous ses tracks ont des paroles.
+    """
+    con = duckdb.connect(str(db_path))
+    
+    rows = con.execute("""
+        SELECT track_id, lyrics IS NOT NULL
+        FROM tracks_flat
+        WHERE artist_id = ?
+    """, [artist_id]).fetchall()
+
+    # Albums dont TOUS les tracks ont des lyrics
+    complete_albums = con.execute("""
+        SELECT album_id
+        FROM tracks_flat
+        WHERE artist_id = ? AND album_id IS NOT NULL
+        GROUP BY album_id
+        HAVING COUNT(*) > 0 AND SUM(CASE WHEN lyrics IS NULL THEN 1 ELSE 0 END) = 0
+    """, [artist_id]).fetchall()
+    
+    con.close()
+    return (
+        {tid: has_lyrics for tid, has_lyrics in rows},
+        {row[0] for row in complete_albums},
+    )
 
 def _parse_date(components: Optional[dict]) -> Optional[str]:
     if not components:
@@ -99,24 +132,25 @@ def fetch_artist(query: str, genius: lyricsgenius.Genius, db_path: Path) -> dict
     logger.info("Fetching artiste : %s", query)
     logger.info("=" * 60)
 
-    raw = genius.search_artist(query, max_songs=1, get_full_info=True)
-    if not raw:
-        raise ValueError(f"Aucun artiste trouvé pour : '{query}'")
-    
-    artist = {
-        "id":        raw._body.get("id"),
-        "name":      raw.name,
-        "image_url": raw.image_url,
-        "header_image_url": raw._body.get("header_image_url"),
-        "followers_count": raw._body.get("followers_count"),
-        "url":       raw.url,
-        "albums":    [],
-        "loose_tracks": [],
-    }
-    logger.info("Artiste résolu : %s | id=%d | %d titres récupérés", artist["name"], artist["id"], len(raw.songs))
+    artist = _load_artist_meta(db_path, query)
+    if artist:
+        logger.info("Artiste trouvé en BDD : %s | id=%d", artist["name"], artist["id"])
+    else:
+        raw = genius.search_artist(query, max_songs=1, get_full_info=True)
+        if not raw:
+            raise ValueError(f"Aucun artiste trouvé pour : '{query}'")
+        artist = {
+            "id": raw._body.get("id"), "name": raw.name,
+            "image_url": raw.image_url,
+            "header_image_url": raw._body.get("header_image_url"),
+            "followers_count": raw._body.get("followers_count"),
+            "url": raw.url, "albums": [], "loose_tracks": [],
+        }
+        logger.info("Artiste résolu via API : %s | id=%d", artist["name"], artist["id"])
 
-    existing_ids = _load_existing_track_ids(db_path, artist["id"])
-    known_ids = set(existing_ids)
+    existing_tracks, complete_albums = _load_existing_tracks(db_path, artist["id"])
+    
+    fetched_this_run: set[int] = set()
     
     logger.info("  Récupération des albums...")
     page = 1
@@ -137,7 +171,13 @@ def fetch_artist(query: str, genius: lyricsgenius.Genius, db_path: Path) -> dict
                 "url": album_raw.get("url", ""),
                 "tracks": [],
             }
+            if album["id"] in complete_albums:
+                logger.info("    ⏭ Skip album complet (déjà en BDD) : %s", album["name"])
+                artist["albums"].append(album)  # on garde la méta sans re-fetch les tracks
+                continue
             logger.info("  [Album] %s | %s", album["name"], album["release_date"] or "?")
+            
+            skipped_album = 0
             
             tracks_page = 1
             while True:
@@ -153,28 +193,29 @@ def fetch_artist(query: str, genius: lyricsgenius.Genius, db_path: Path) -> dict
 
                     song_id = song.get("id")
 
-                    if song_id in existing_ids:
-                        logger.info("    ⏭ Skip (déjà en base) : %s", song.get("title", song_id))
-                        known_ids.add(song_id)
-                        continue
-
+                    if song_id in existing_tracks:
+                        if existing_tracks[song_id]:
+                            logger.info("    ⏭ Skip (déjà complet) : %s", song.get("title"))
+                            skipped_album += 1
+                            continue
+                        else:
+                            logger.info("    🔁 Retry lyrics manquants : %s", song.get("title"))
+                            
                     full_song = _search_song_safe(genius, song_id)
                     if full_song:
                         track = _build_track(full_song)
                         album["tracks"].append(track)
-                        known_ids.add(song_id)
+                        fetched_this_run.add(song_id)
+                        existing_tracks[song_id] = track["lyrics"] is not None
 
                 next_tracks = tracks_raw.get("next_page")
                 if not next_tracks:
                     break
                 tracks_page = next_tracks
 
-            skipped = sum(1 for item in tracks_raw.get("tracks", [])
-                         if item.get("song", {}).get("id") in existing_ids)
             feats   = sum(1 for t in album["tracks"] if t["featuring"])
             lyrics  = sum(1 for t in album["tracks"] if t["lyrics"])
-            logger.info("    └─ %d nouveaux titres | %d featurings | %d paroles",
-                        len(album["tracks"]), feats, lyrics)
+            logger.info("    └─ %d nouveaux titres | %d featurings | %d paroles", len(album["tracks"]), feats, lyrics)
             artist["albums"].append(album)
 
         next_page = albums_raw.get("next_page")
@@ -188,37 +229,50 @@ def fetch_artist(query: str, genius: lyricsgenius.Genius, db_path: Path) -> dict
     songs_page = 1
     while True:
         songs_raw = genius.artist_songs(artist["id"], per_page=50, page=songs_page, sort="popularity")
-        batch     = songs_raw.get("songs", [])
+        batch = songs_raw.get("songs", [])
         if not batch:
             break
 
+        new_on_page = 0  # ← compteur de nouveautés sur cette page
         for song in batch:
             song_id = song.get("id")
-            if song_id in known_ids:
-                logger.info("    ⏭ Skip hors-album (déjà en base) : %s", song.get("title", song_id))
+            if song_id in fetched_this_run:
                 continue
+            if song_id in existing_tracks:
+                if existing_tracks[song_id]:
+                    fetched_this_run.add(song_id)
+                    continue
             if song.get("primary_artist", {}).get("id") != artist["id"]:
                 continue
+
             full_song = _search_song_safe(genius, song_id)
             if full_song:
-                artist["loose_tracks"].append(_build_track(full_song))
-                known_ids.add(song_id)
+                track = _build_track(full_song)
+                artist["loose_tracks"].append(track)
+                fetched_this_run.add(song_id)
+                existing_tracks[song_id] = track["lyrics"] is not None
+                new_on_page += 1
 
         next_page = songs_raw.get("next_page")
         if not next_page:
             break
+
+        # ← Si toute la page était déjà en BDD, inutile de paginer davantage
+        if new_on_page == 0:
+            logger.info("    ⏭ Page hors-album entièrement connue, arrêt de la pagination")
+            break
+
         songs_page = next_page
-
+ 
     logger.info("  Titres hors-album nouveaux : %d", len(artist["loose_tracks"]))
-
+ 
     total  = sum(len(a["tracks"]) for a in artist["albums"]) + len(artist["loose_tracks"])
     lyrics = sum(1 for a in artist["albums"] for t in a["tracks"] if t["lyrics"])
     lyrics += sum(1 for t in artist["loose_tracks"] if t["lyrics"])
     feats  = sum(1 for a in artist["albums"] for t in a["tracks"] if t["featuring"])
     feats  += sum(1 for t in artist["loose_tracks"] if t["featuring"])
-
-    logger.info("✅ %s : %d albums | %d nouveaux titres | %d paroles | %d featurings",
-                artist["name"], len(artist["albums"]), total, lyrics, feats)
+ 
+    logger.info("✅ %s : %d albums | %d nouveaux titres | %d paroles | %d featurings", artist["name"], len(artist["albums"]), total, lyrics, feats)
     return artist
 
 def _build_track(song) -> dict:
