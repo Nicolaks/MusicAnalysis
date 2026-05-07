@@ -22,3 +22,10 @@ unidecode
 rapidfuzz
 scipy
 librosa
+textstat
+NRCLex==3.0.0
+pronouncing
+pyphen
+spotipy
+sentence-transformers
+vaderSentiment

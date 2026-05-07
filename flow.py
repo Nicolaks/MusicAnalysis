@@ -25,6 +25,7 @@ from pipeline.sourcing import merge_ranking
 from pipeline.sourcing import samples_downloader
 from pipeline.sourcing import kworb_streams
 from pipeline.analyse import audio_features
+from pipeline.nlp import lyrics_analyzer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", handlers=[logging.FileHandler("logs/flow.log", encoding="utf-8"), logging.StreamHandler()])
 logger = logging.getLogger(__name__)
@@ -56,6 +57,23 @@ def query(sql: str) -> None:
     con.close()
     logger.info("%d lignes retournées", len(df))
     print(df.to_string(index=False))
+    
+def get_db_table_schema():
+    logger.info("Génération du fichier CSV des tables de la BDD")
+    query(
+        """
+        COPY (
+            SELECT 
+                table_name,
+                column_name,
+                data_type
+            FROM information_schema.columns
+            ORDER BY table_name, ordinal_position
+        )
+        TO 'rapports/schema_all_tables.csv'
+        WITH (HEADER, DELIMITER ',')
+    """)
+    logger.info("Génération terminées")
     
 def run_extract_genuis():
     """Étape 1 : Explore Genius pour lister les morceaux de chaque artiste."""
@@ -95,6 +113,12 @@ def audio_features_analysis():
     audio_features.run(db_path=DB_PATH)
     logger.info("Analyse des features audio terminée")
     
+def lyrics_analyser_process():
+    """Étape 7 : Analyse des paroles afin de récupérer les métriques utiles."""
+    logger.info("Début de l'analyse des paroles")
+    lyrics_analyzer.run(db_path=DB_PATH, artists=ARTISTS)
+    logger.info("Analyse des paroles terminée")
+    
 # ─────────────────────────────────────────────
 # Orchestration et Audit
 # ─────────────────────────────────────────────
@@ -111,6 +135,9 @@ def get_audit_csv(enable: bool):
         "samples_index",
         "isrc_data",
         "tracks_flat",
+        "tracks_analysis",
+        "albums_analysis",
+        "artists_analysis",
     ]    
     if enable:
         for table in audit_table_list:
@@ -121,17 +148,22 @@ def get_audit_csv(enable: bool):
        
 def run():
     """Exécute l'intégralité du pipeline dans l'ordre logique des dépendances."""
-    run_extract_genuis()
-    run_extract_deezer()
-    download_samples()
-    merge_with_ranking()
-    get_streams()
-    audio_features_analysis()
+    #run_extract_genuis()
+    #run_extract_deezer()
+    #download_samples()
+    #merge_with_ranking()
+    #get_streams()
+    #audio_features_analysis()
+    lyrics_analyser_process()
     
 
 if __name__ == "__main__":
     # Point d'entrée : Exécution du flow complet puis génération de l'audit
     #query("DROP TABLE kworb_streams")
-    run()
+    #query("DROP TABLE tracks_analysis")
+    #query("DROP TABLE albums_analysis")
+    #query("DROP TABLE artists_analysis")
+    #run()
     #query("SHOW TABLES")
     get_audit_csv(True)
+    get_db_table_schema()
