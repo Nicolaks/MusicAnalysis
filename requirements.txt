@@ -29,3 +29,5 @@ pyphen
 spotipy
 sentence-transformers
 vaderSentiment
+tiktoken
+sentencepiece

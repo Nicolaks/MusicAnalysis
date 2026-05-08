@@ -160,10 +160,10 @@ def run():
 if __name__ == "__main__":
     # Point d'entrée : Exécution du flow complet puis génération de l'audit
     #query("DROP TABLE kworb_streams")
-    #query("DROP TABLE tracks_analysis")
-    #query("DROP TABLE albums_analysis")
-    #query("DROP TABLE artists_analysis")
-    #run()
+    query("DROP TABLE tracks_analysis")
+    query("DROP TABLE albums_analysis")
+    query("DROP TABLE artists_analysis")
+    run()
     #query("SHOW TABLES")
     get_audit_csv(True)
     get_db_table_schema()

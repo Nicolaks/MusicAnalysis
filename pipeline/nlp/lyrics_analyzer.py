@@ -36,6 +36,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from transformers import AutoTokenizer, pipeline as hf_pipeline
 import pronouncing
 import pyphen
 
@@ -113,6 +114,14 @@ CREATE TABLE IF NOT EXISTS tracks_analysis (
     semantic_density        DOUBLE,
     lexical_diversity       DOUBLE,
     hapax_ratio             DOUBLE,
+    
+    -- ── 8. Analyse sentiment ──────────────────────────────────────────────────
+    
+    sentiment_label         VARCHAR,    -- 'positive' | 'neutral' | 'negative'
+    sentiment_score         DOUBLE,     -- score du label dominant
+    sentiment_positive      DOUBLE,
+    sentiment_neutral       DOUBLE,
+    sentiment_negative      DOUBLE,
 
     analyzed_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -174,6 +183,13 @@ CREATE TABLE IF NOT EXISTS albums_analysis (
     avg_lexical_diversity   DOUBLE,
     avg_hapax_ratio         DOUBLE,
     album_hapax_ratio       DOUBLE,
+    
+    -- ── 8 Analyse sentiment ───────────────────────────────────────────────────
+    avg_sentiment_positive  DOUBLE,
+    avg_sentiment_neutral   DOUBLE,
+    avg_sentiment_negative  DOUBLE,
+    pct_positive            DOUBLE,
+    pct_negative            DOUBLE,
 
     analyzed_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -236,6 +252,13 @@ CREATE TABLE IF NOT EXISTS artists_analysis (
     avg_lexical_diversity   DOUBLE,
     avg_hapax_ratio         DOUBLE,
     career_hapax_ratio      DOUBLE,
+    
+    -- ── 8 Analyse sentiment ───────────────────────────────────────────────────
+    avg_sentiment_positive  DOUBLE,
+    avg_sentiment_neutral   DOUBLE,
+    avg_sentiment_negative  DOUBLE,
+    pct_positive            DOUBLE,
+    pct_negative            DOUBLE,
 
     analyzed_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -363,6 +386,23 @@ def _get_sbert():
     if _sbert_inst is None:
         _sbert_inst = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
     return _sbert_inst
+
+_sentiment_pipe = None
+
+def _get_sentiment():
+    global _sentiment_pipe
+    if _sentiment_pipe is None:
+        _sentiment_pipe = hf_pipeline(
+            "sentiment-analysis",
+            model="cardiffnlp/twitter-xlm-roberta-base-sentiment",
+            tokenizer=AutoTokenizer.from_pretrained(
+                "cardiffnlp/twitter-xlm-roberta-base-sentiment",
+                use_fast=False,
+            ),
+            truncation=True,
+            max_length=512,
+        )
+    return _sentiment_pipe
 
 # ─────────────────────────────────────────────────────────────────────────────
 # LDA
@@ -523,6 +563,9 @@ def analyze_track(
     fd2 = FreqDist(alpha)
     hapax = sum(1 for _, c in fd2.items() if c == 1)
     r["hapax_ratio"] = _safe_div(hapax, len(set(alpha)))
+    
+    sentiment = _sentiment_lyrics(lyrics)
+    r.update(sentiment)
 
     return r
 
@@ -616,6 +659,13 @@ def aggregate_album(
     r["avg_hapax_ratio"]       = _avg(_col("hapax_ratio"))
     hapax = sum(1 for _, c in freq_all.items() if c == 1)
     r["album_hapax_ratio"]     = _safe_div(hapax, len(set(all_tokens)))
+    
+    for s in ["sentiment_positive", "sentiment_neutral", "sentiment_negative"]:
+        r[f"avg_{s}"] = _avg(_col(s))
+        
+    labels = [t["sentiment_label"] for t in track_rows if t.get("sentiment_label")]
+    r["pct_positive"] = _safe_div(labels.count("positive"), len(labels)) if labels else 0.0
+    r["pct_negative"] = _safe_div(labels.count("negative"), len(labels)) if labels else 0.0
 
     return r
 
@@ -738,6 +788,13 @@ def aggregate_artist(
     r["avg_hapax_ratio"]       = _avg(_col("hapax_ratio"))
     hapax = sum(1 for _, c in freq_all.items() if c == 1)
     r["career_hapax_ratio"]    = _safe_div(hapax, len(set(all_tokens)))
+    
+    for s in ["sentiment_positive", "sentiment_neutral", "sentiment_negative"]:
+        r[f"avg_{s}"] = _avg(_col(s))
+
+    labels = [t["sentiment_label"] for t in track_rows if t.get("sentiment_label")]
+    r["pct_positive"] = _safe_div(labels.count("positive"), len(labels)) if labels else 0.0
+    r["pct_negative"] = _safe_div(labels.count("negative"), len(labels)) if labels else 0.0
 
     return r
 
@@ -789,19 +846,83 @@ def load_tracks_to_analyze(db_path: Path, artists: list[str], rerun: bool) -> li
 def _upsert(con: duckdb.DuckDBPyConnection, table: str, rows: list[dict]) -> tuple[int, int]:
     if not rows:
         return 0, 0
-    cols = list(rows[0].keys())
-    ph   = ", ".join(["?"] * len(cols))
-    sql  = f"INSERT OR REPLACE INTO {table} ({', '.join(cols)}) VALUES ({ph})"
+
+    # Colonnes réellement présentes en base
+    db_cols = set(
+        con.execute(f"DESCRIBE {table}").fetchdf()["column_name"].str.lower()
+    )
+
+    all_keys    = list(rows[0].keys())
+    valid_keys  = [k for k in all_keys if k.lower() in db_cols]
+    ignored     = set(all_keys) - set(valid_keys)
+    if ignored:
+        logger.warning("⚠️  Colonnes ignorées dans %s : %s", table, ignored)
+
+    ph  = ", ".join(["?"] * len(valid_keys))
+    sql = f"INSERT OR REPLACE INTO {table} ({', '.join(valid_keys)}) VALUES ({ph})"
+
     ok = bad = 0
     for row in rows:
         try:
-            con.execute(sql, list(row.values()))
+            con.execute(sql, [row[k] for k in valid_keys])
             ok += 1
         except Exception as e:
             label = row.get("track_name") or row.get("album_name") or row.get("artist_name")
             logger.error("INSERT %s [%s] : %s", table, label, e)
             bad += 1
     return ok, bad
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Analyse des sentiments
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _sentiment_lyrics(lyrics: str) -> dict:
+    """
+    Découpe les paroles en chunks de 512 tokens max,
+    analyse chaque chunk, puis agrège.
+    Retourne : label dominant, score moyen, distribution pos/neu/neg.
+    """
+    pipe = _get_sentiment()
+    
+    lines = [l.strip() for l in lyrics.splitlines() if l.strip()]
+    
+    chunk_size = 20
+    chunks = [
+        " ".join(lines[i:i+chunk_size])
+        for i in range(0, len(lines), chunk_size)
+    ] or [lyrics[:1000]]
+    
+    scores = {"positive": [], "neutral": [], "negative": []}
+    
+    for chunk in chunks:
+        try:
+            results = pipe(chunk, top_k=3)
+            for item in results:
+                label = item["label"].lower()
+                if label in scores:
+                    scores[label].append(item["score"])
+        except Exception:
+            continue
+    
+    if not any(scores.values()):
+        return {
+            "sentiment_label": None,
+            "sentiment_score": None,
+            "sentiment_positive": None,
+            "sentiment_neutral": None,
+            "sentiment_negative": None,
+        }
+    
+    avg = {k: float(np.mean(v)) if v else 0.0 for k, v in scores.items()}
+    dominant = max(avg, key=avg.get)
+    
+    return {
+        "sentiment_label":    dominant,
+        "sentiment_score":    avg[dominant],
+        "sentiment_positive": avg["positive"],
+        "sentiment_neutral":  avg["neutral"],
+        "sentiment_negative": avg["negative"],
+    }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Orchestration
