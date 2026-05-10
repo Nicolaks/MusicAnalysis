@@ -1,0 +1,52 @@
+import streamlit as st
+
+
+
+# def artist_header(artist, image_url):
+
+#     name = artist["artist_name"]
+
+#     html = f"""
+#     <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;">
+#         <img src="{image_url}"
+#             style="width:120px;height:120px;border-radius:50%;
+#                    object-fit:cover;border:4px solid #5dbf8a;">
+
+#         <div>
+#             <h2 style="margin:0;">{name}</h2>
+#         </div>
+#     </div>
+#     """
+
+#     st.markdown(html, unsafe_allow_html=True)
+    
+    
+def artist_header(artist, image_url):
+
+    col1, col2 = st.columns([1, 5])
+
+    with col1:
+        if image_url:
+            st.image(image_url)
+
+            # petit hack visuel : bordure via CSS Streamlit
+            st.markdown(
+                """
+                <style>
+                img {
+                    width:120px !important;
+                    height:120px !important;
+                    border-radius: 50% !important;
+                    object-fit:cover !important;
+                    border: 4px solid #5dbf8a !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+
+    with col2:
+        st.markdown(
+            f"<h1 style='margin:10px 0 0 0'>{artist['artist_name']}</h1>",
+            unsafe_allow_html=True
+        )
