@@ -47,15 +47,21 @@ def normalize_radar(values: dict, clip: float = 1.0) -> dict:
 
 
 def albums_emotion_matrix(df_albums: pd.DataFrame) -> pd.DataFrame:
-    emotion_cols = [f"avg_emotion_{e}" for e in EMOTION_LABELS]
-    available    = [c for c in emotion_cols if c in df_albums.columns]
-    if not available or df_albums.empty:
+    if df_albums.empty or "avg_emotion_scores" not in df_albums.columns:
         return pd.DataFrame()
 
-    sub = df_albums[["album_name", "release_year"] + available].copy()
+    records = []
+    for _, row in df_albums.iterrows():
+        try:
+            scores = json.loads(row["avg_emotion_scores"])
+        except (TypeError, json.JSONDecodeError):
+            scores = {}
+        scores["album_name"]   = row["album_name"]
+        scores["release_year"] = row.get("release_year")
+        records.append(scores)
+
+    sub = pd.DataFrame(records)
     sub = sub.sort_values("release_year", na_position="last")
-    rename = {c: c.replace("avg_emotion_", "") for c in available}
-    sub = sub.rename(columns=rename)
     sub = sub.set_index("album_name").drop(columns=["release_year"], errors="ignore")
     return sub
 

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import sys, os
+from data.transforms import safe_float
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from config import COLORS, EMOTION_LABELS, EMOTION_DISPLAY
@@ -86,56 +88,197 @@ def sentiment_line(df: pd.DataFrame, x_col: str = "album_name") -> go.Figure:
 # ── Emotion heatmap ──────────────────────────────────────────────────────────
 
 def emotion_heatmap(df: pd.DataFrame) -> go.Figure:
-    cols_present = [c for c in EMOTION_LABELS if c in df.columns]
-    if not cols_present:
+    cols_present = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+    if not cols_present or df.empty:
         return go.Figure()
-    z = df[cols_present].values.T
-    fig = go.Figure(go.Heatmap(
-        z=z,
-        x=df.index.tolist(),
-        y=[EMOTION_DISPLAY.get(c, c) for c in cols_present],
-        colorscale=[[0, "#f0f7f3"], [0.5, "#5dbf8a"], [1, "#0f3d25"]],
-        text=np.round(z, 2),
-        texttemplate="%{text:.2f}",
-        textfont=dict(size=9),
-        showscale=True,
-        colorbar=dict(thickness=10, tickfont=dict(size=9)),
-    ))
+
+    # Garde seulement les 9 émotions avec moyenne la plus haute
+    means = df[cols_present].mean()
+    cols_present = means.sort_values(ascending=False).head(9).index.tolist()
+
+    # Tronque les noms d'albums
+    albums = [a[:15] + "…" if len(str(a)) > 15 else str(a) for a in df.index.tolist()]
+    emotions = [EMOTION_DISPLAY.get(c, c.capitalize()) for c in cols_present]
+    n = len(cols_present)
+
+    def interpolate_green(i, total):
+        t = i / max(total - 1, 1)
+        r = int(166 + (26  - 166) * t)
+        g = int(210 + (92  - 210) * t)
+        b = int(140 + (56  - 140) * t)
+        return f"rgb({r},{g},{b})"
+
+    fig = go.Figure()
+
+    for i, (col, emo_label) in enumerate(zip(cols_present, emotions)):
+        vals = df[col].fillna(0).values
+        vmax = vals.max() if vals.max() > 0 else 1
+        # Écart amplifié : 4px → 44px
+        sizes = [3 + (v / vmax) ** 0.6 * 19 for v in vals]
+        color = interpolate_green(i, n)
+
+        fig.add_trace(go.Scatter(
+            x=albums,
+            y=[emo_label] * len(albums),
+            mode="markers",
+            name=emo_label,
+            marker=dict(
+                size=sizes,
+                color=color,
+                opacity=0.9,
+                line=dict(color="#ffffff", width=1.5),
+            ),
+            text=[f"<b>{emo_label}</b><br>{v:.3f}" for v in vals],
+            hovertemplate="%{x}<br>%{text}<extra></extra>",
+        ))
+
     fig.update_layout(
         **_LAYOUT,
-        height=max(220, 40 * len(cols_present) + 60),
-        xaxis=dict(tickangle=-30, tickfont=dict(size=10)),
-        yaxis=dict(tickfont=dict(size=10)),
+        height=max(300, 55 * len(cols_present) + 80),  # 44 → 55
+        showlegend=False,
+        xaxis=dict(
+            tickangle=-35,
+            tickfont=dict(size=9, color="#888"),
+            showgrid=False,
+            zeroline=False,
+        ),
+        yaxis=dict(
+            tickfont=dict(size=10, color="#555"),
+            showgrid=True,
+            gridcolor="#f0f0f0",
+            gridwidth=1,
+            zeroline=False,
+        ),
     )
     return fig
-
 
 # ── Lexical fields bars ──────────────────────────────────────────────────────
 
 def lexical_bars(values: dict[str, float]) -> go.Figure:
     labels = list(values.keys())
     vals   = list(values.values())
+    total  = sum(vals) if sum(vals) > 0 else 1
+    pcts   = [v / total * 100 for v in vals]
     colors = [COLORS["primary"] if v == max(vals) else COLORS["primary_light"] for v in vals]
+
     fig = go.Figure(go.Bar(
         x=vals, y=labels, orientation="h",
         marker_color=colors,
-        text=[f"{v:.3f}" for v in vals],
+        text=[f"{p:.1f}%" for p in pcts],
         textposition="outside",
-        textfont=dict(size=10),
+        textfont=dict(size=12),
     ))
     fig.update_layout(
-        **_LAYOUT, height=180,
-        xaxis=dict(range=[0, max(vals) * 1.3 if vals else 1], showgrid=False, visible=False),
-        yaxis=dict(tickfont=dict(size=11), autorange="reversed"),
+        **_LAYOUT,
+        height=max(300, 32 * len(labels) + 60),
+        xaxis=dict(range=[0, max(vals) * 1.35 if vals else 1], showgrid=False, visible=False),
+        yaxis=dict(tickfont=dict(size=13), autorange="reversed"),
+        bargap=0.2,
     )
     return fig
 
+def identity_card_chart(artist: pd.Series, corpus: pd.Series) -> go.Figure:
+
+    metrics = [
+        ("Mots / chanson",  "avg_word_count",      "wc_min",    "wc_max",    "wc_avg",    "{:.0f}"),
+        ("Diversité (TTR)", "avg_ttr",              "ttr_min",   "ttr_max",   "ttr_avg",   "{:.2f}"),
+        ("Rimes",           "avg_rhyme_density",    "rhyme_min", "rhyme_max", "rhyme_avg", "{:.2f}"),
+        ("Richesse vocab.", "avg_hapax_ratio",      "hapax_min", "hapax_max", "hapax_avg", "{:.2f}"),
+        ("Auto-référence",  "avg_pronoun_i_ratio",  "i_min",     "i_max",     "i_avg",     "{:.2f}"),
+        ("Répétition",      "avg_repetition_ratio", "rep_min",   "rep_max",   "rep_avg",   "{:.2f}"),
+        ("Complexité mots", "avg_word_length",      "wl_min",    "wl_max",    "wl_avg",    "{:.1f}"),
+    ]
+
+    rows = []
+    for label, key, cmin, cmax, cavg, fmt in metrics:
+        val = safe_float(artist.get(key))
+        if val is None:
+            continue
+        vmin = corpus.get(cmin, 0)
+        vmax = corpus.get(cmax, 1)
+        avg  = corpus.get(cavg, (vmin + vmax) / 2)
+        # Normalise tout en 0-1 pour comparer sur même axe
+        def norm(v): return max(0.0, min(1.0, (v - vmin) / (vmax - vmin))) if vmax != vmin else 0.5
+        rows.append({
+            "label": label,
+            "val":   val,
+            "norm":  norm(val),
+            "avg":   norm(avg),
+            "fmt":   fmt.format(val),
+            "above": norm(val) >= norm(avg),
+        })
+
+    if not rows:
+        return go.Figure()
+
+    labels = [r["label"] for r in rows]
+    norms  = [r["norm"]  for r in rows]
+    avgs   = [r["avg"]   for r in rows]
+    texts  = [r["fmt"]   for r in rows]
+    colors = [COLORS["primary"] if r["above"] else COLORS["primary_light"] for r in rows]
+
+    fig = go.Figure()
+
+    # Barre fond gris
+    fig.add_trace(go.Bar(
+        x=[1.0] * len(rows),
+        y=labels,
+        orientation="h",
+        marker=dict(color="#f0f0f0", line=dict(width=0)),
+        showlegend=False,
+        hoverinfo="skip",
+        width=0.5,
+    ))
+
+    # Barre artiste
+    fig.add_trace(go.Bar(
+        x=norms,
+        y=labels,
+        orientation="h",
+        marker=dict(color=colors, line=dict(width=0)),
+        text=texts,
+        textposition="outside",
+        textfont=dict(size=11, color="#555", family="DM Sans"),
+        showlegend=False,
+        hovertemplate="%{y} : %{text}<extra></extra>",
+        width=0.5,
+    ))
+
+    # Ligne verticale moyenne corpus
+    for r in rows:
+        fig.add_shape(
+            type="line",
+            x0=r["avg"], x1=r["avg"],
+            y0=labels.index(r["label"]) - 0.35,
+            y1=labels.index(r["label"]) + 0.35,
+            line=dict(color="#888780", width=2, dash="dot"),
+        )
+
+    # Annotation légende manuelle
+    fig.add_annotation(
+        x=0.98, y=-0.08,
+        xref="paper", yref="paper",
+        text="<b>——</b> Artiste   <b style='color:#888'>····</b> Moyenne corpus",
+        showarrow=False,
+        font=dict(size=10, color="#888", family="DM Sans"),
+        align="right",
+    )
+
+    fig.update_layout(
+        **_LAYOUT,
+        barmode="overlay",
+        height=max(300, 52 * len(rows) + 80),
+        bargap=0.3,
+        xaxis=dict(visible=False, range=[0, 1.45]),
+        yaxis=dict(tickfont=dict(size=12), autorange="reversed"),
+    )
+    return fig
 
 # ── Top words bars ───────────────────────────────────────────────────────────
 
 def top_words_bar(words: list[str], counts: list[int] | None = None) -> go.Figure:
-    words = words[:20][::-1]
-    y     = counts[:20][::-1] if counts else list(range(len(words), 0, -1))
+    words = words[:20]
+    y     = counts[:20] if counts else list(range(len(words), 0, -1))
     fig = go.Figure(go.Bar(
         x=y, y=words, orientation="h",
         marker=dict(
@@ -147,7 +290,7 @@ def top_words_bar(words: list[str], counts: list[int] | None = None) -> go.Figur
     fig.update_layout(
         **_LAYOUT, height=380,
         xaxis=dict(showgrid=False, visible=False),
-        yaxis=dict(tickfont=dict(size=10)),
+        yaxis=dict(tickfont=dict(size=11), autorange="reversed"),
     )
     return fig
 
@@ -309,5 +452,51 @@ def vocab_evolution(df: pd.DataFrame) -> go.Figure:
         yaxis2=dict(overlaying="y", side="right", title="TTR",
                     tickformat=".3f", tickfont=dict(size=10)),
         legend=dict(orientation="h", y=-0.3, font=dict(size=10)),
+    )
+    return fig
+
+def emotion_donut_chart(avg_emotion_scores: str | None) -> go.Figure:
+    if not avg_emotion_scores:
+        return go.Figure()
+
+    scores = json.loads(avg_emotion_scores)
+    scores = {k: v for k, v in scores.items() if v > 0.01}
+    scores = dict(sorted(scores.items(), key=lambda x: x[1], reverse=True))
+
+    n = len(scores)
+    labels = [EMOTION_DISPLAY.get(k, k.capitalize()) for k in scores.keys()]
+    values = list(scores.values())
+    dominant = labels[0] if labels else ""
+
+    # Dégradé vert clair → vert foncé selon le rang
+    def interpolate_green(i, total):
+        t = i / max(total - 1, 1)
+        r = int(166 + (26 - 166) * t)   # 166 → 26
+        g = int(210 + (92 - 210) * t)   # 210 → 92
+        b = int(140 + (56 - 140) * t)   # 140 → 56
+        return f"rgb({r},{g},{b})"
+
+    colors = [interpolate_green(i, n) for i in range(n)]
+
+    fig = go.Figure(go.Pie(
+        labels=labels,
+        values=values,
+        hole=0.65,
+        marker=dict(colors=colors, line=dict(color="#ffffff", width=2)),
+        textinfo="none",
+        hovertemplate="<b>%{label}</b> : %{percent}<extra></extra>",
+        sort=False,
+    ))
+
+    fig.update_layout(
+        annotations=[dict(
+            text=f"<b>{dominant}</b>",
+            x=0.5, y=0.5,
+            font=dict(family="DM Sans", size=13, color="#444"),
+            showarrow=False,
+        )],
+        showlegend=False,
+        **_LAYOUT,
+        height=280,
     )
     return fig

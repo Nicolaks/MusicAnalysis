@@ -77,6 +77,49 @@ def get_albums(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
+def get_albums_with_streams(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
+    try:
+        con = _con(db_path)
+        has_kworb   = _table_exists(con, "kworb_streams")
+        has_ranking = _table_exists(con, "ranking_data")
+        print(f"has_kworb={has_kworb}, has_ranking={has_ranking}")
+        
+        # Test simple d'abord
+        df = con.execute("""
+            SELECT * FROM albums_analysis WHERE artist_name = ?
+        """, [artist_name]).df()
+        print(f"albums_analysis rows: {len(df)}")
+        con.close()
+        return df
+    except Exception as e:
+        print(f"ERREUR: {e}")
+        return pd.DataFrame()
+    
+def get_corpus_stats(db_path: Path = DB_PATH) -> pd.Series:
+    try:
+        con = _con(db_path)
+        df = con.execute("""
+            SELECT 
+                MIN(avg_word_count) as wc_min, MAX(avg_word_count) as wc_max,
+                AVG(avg_word_count) as wc_avg,
+                MIN(avg_ttr) as ttr_min, MAX(avg_ttr) as ttr_max,
+                AVG(avg_ttr) as ttr_avg,
+                MIN(avg_rhyme_density) as rhyme_min, MAX(avg_rhyme_density) as rhyme_max,
+                AVG(avg_rhyme_density) as rhyme_avg,
+                MIN(avg_hapax_ratio) as hapax_min, MAX(avg_hapax_ratio) as hapax_max,
+                AVG(avg_hapax_ratio) as hapax_avg,
+                MIN(avg_pronoun_i_ratio) as i_min, MAX(avg_pronoun_i_ratio) as i_max,
+                AVG(avg_pronoun_i_ratio) as i_avg,
+                MIN(avg_repetition_ratio) as rep_min, MAX(avg_repetition_ratio) as rep_max,
+                AVG(avg_repetition_ratio) as rep_avg,
+                MIN(avg_word_length) as wl_min, MAX(avg_word_length) as wl_max,
+                AVG(avg_word_length) as wl_avg
+            FROM artists_analysis
+        """).df()
+        con.close()
+        return df.iloc[0]
+    except Exception:
+        return pd.Series(dtype=float)
 
 def get_tracks(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     try:
