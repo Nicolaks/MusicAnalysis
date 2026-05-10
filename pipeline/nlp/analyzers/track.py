@@ -21,7 +21,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from pipeline.nlp.config import ALL_STOPWORDS
 from pipeline.nlp.helpers import (
     avg, clean_lyrics, count_syllables, custom_tokenizer,
-    filtered_tokens, safe_div, yule_k,
+    filtered_tokens, safe_div, yule_k, score_emotions, score_lexical_fields, dominant_emotions
 )
 from pipeline.nlp.models import get_nlp, get_sbert
 
@@ -35,7 +35,6 @@ def analyze_track(
     album_name: Optional[str],
     raw_lyrics: str,
     isrc: Optional[str] = None,
-    artist_isrc: Optional[str] = None,
     lda_model=None,
 ) -> dict:
     """
@@ -46,7 +45,7 @@ def analyze_track(
     r: dict = {
         "track_id": track_id, "artist_id": artist_id, "album_id": album_id,
         "track_name": track_name, "artist_name": artist_name, "album_name": album_name,
-        "isrc": isrc, "artist_isrc": artist_isrc,
+        "isrc": isrc,
     }
 
     # ── 2. Stats lexicales ────────────────────────────────────────────────────
@@ -154,5 +153,14 @@ def analyze_track(
     fd2   = FreqDist(alpha)
     hapax = sum(1 for _, c in fd2.items() if c == 1)
     r["hapax_ratio"] = safe_div(hapax, len(set(alpha)))
+    
+    # ── 8. Émotions & champs lexicaux ────────────────────────────────────────────
+    emotion_scores = score_emotions(alpha)
+    lex_scores     = score_lexical_fields(alpha)
+
+    r["emotion_scores"]          = json.dumps(emotion_scores, ensure_ascii=False)
+    r["dominant_emotions"]       = json.dumps(dominant_emotions(emotion_scores), ensure_ascii=False)
+    r["lexical_field_scores"]    = json.dumps(lex_scores, ensure_ascii=False)
+    r["dominant_lexical_fields"] = json.dumps(dominant_emotions(lex_scores), ensure_ascii=False)
 
     return r

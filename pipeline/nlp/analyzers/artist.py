@@ -17,15 +17,30 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from pipeline.nlp.config import ALL_STOPWORDS
-from pipeline.nlp.helpers import avg, clean_lyrics, custom_tokenizer, filtered_tokens, safe_div, std
+from pipeline.nlp.helpers import avg, clean_lyrics, custom_tokenizer, filtered_tokens, safe_div, std, dominant_emotions
 
 logger = logging.getLogger(__name__)
 
 
+# ── 8. Émotions & champs lexicaux ────────────────────────────────────────────
+def _avg_json_scores(rows: list[dict], key: str) -> dict[str, float]:
+    """Moyenne des scores JSON sur un ensemble de tracks."""
+    all_scores: list[dict] = []
+    for row in rows:
+        raw = row.get(key)
+        if raw:
+            try:
+                all_scores.append(json.loads(raw))
+            except Exception:
+                pass
+    if not all_scores:
+        return {}
+    keys = all_scores[0].keys()
+    return {k: avg([s[k] for s in all_scores if k in s]) for k in keys}
+
 def aggregate_artist(
     artist_id: int,
     artist_name: str,
-    artist_isrc: Optional[str],
     track_rows: list[dict],
     album_rows: list[dict],
     raw_lyrics_list: list[str],
@@ -40,7 +55,6 @@ def aggregate_artist(
     n_albums = len(album_rows)
     r: dict = {
         "artist_id": artist_id, "artist_name": artist_name,
-        "artist_isrc": artist_isrc,
         "album_count": n_albums, "track_count": n_tracks,
     }
     if n_tracks == 0:
@@ -93,7 +107,7 @@ def aggregate_artist(
 
     # Cohérence inter-albums + centroïde PCA 10d
     try:
-        from models import get_sbert
+        from pipeline.nlp.models import get_sbert
         sbert    = get_sbert()
         all_embs = sbert.encode([clean_lyrics(l)[:512] for l in raw_lyrics_list])
 
@@ -160,5 +174,13 @@ def aggregate_artist(
     r["avg_hapax_ratio"]       = avg(_col("hapax_ratio"))
     hapax = sum(1 for _, c in freq_all.items() if c == 1)
     r["career_hapax_ratio"] = safe_div(hapax, len(set(all_tokens)))
+    
+    avg_emotion = _avg_json_scores(track_rows, "emotion_scores")
+    avg_lex     = _avg_json_scores(track_rows, "lexical_field_scores")
+
+    r["avg_emotion_scores"]       = json.dumps(avg_emotion, ensure_ascii=False)
+    r["dominant_emotions"]        = json.dumps(dominant_emotions(avg_emotion), ensure_ascii=False)
+    r["avg_lexical_field_scores"] = json.dumps(avg_lex, ensure_ascii=False)
+    r["dominant_lexical_fields"]  = json.dumps(dominant_emotions(avg_lex), ensure_ascii=False)
 
     return r

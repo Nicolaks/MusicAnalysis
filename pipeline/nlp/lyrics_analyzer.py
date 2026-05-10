@@ -123,7 +123,7 @@ def _run_tracks(
                 track_id=m["track_id"], artist_id=m["artist_id"], album_id=m["album_id"],
                 track_name=m["track_name"], artist_name=m["artist_name"],
                 album_name=m["album_name"], raw_lyrics=m["lyrics"],
-                isrc=m["isrc"], artist_isrc=m["artist_isrc"],
+                isrc=m["isrc"],
                 lda_model=lda_model,
             )
             results.append(row)
@@ -216,7 +216,6 @@ def _run_artists(
             row = aggregate_artist(
                 artist_id=artist_id,
                 artist_name=sample["artist_name"],
-                artist_isrc=sample.get("artist_isrc"),
                 track_rows=analyzed,
                 album_rows=albums_for,
                 raw_lyrics_list=[t["lyrics"] for t in artist_tracks],

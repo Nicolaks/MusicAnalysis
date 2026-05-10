@@ -13,7 +13,7 @@ import numpy as np
 import pyphen
 from nltk.tokenize import word_tokenize
 
-from pipeline.nlp.config import ALL_STOPWORDS
+from pipeline.nlp.config import *
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Texte
@@ -107,3 +107,40 @@ def linear_trend(xs: list[float], ys: list[float]) -> float:
     xs_c = xs_a - xs_a.mean()
     denom = (xs_c ** 2).sum()
     return float((xs_c * ys_a).sum() / denom) if denom else 0.0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Emotions / champs lexical
+# ─────────────────────────────────────────────────────────────────────────────
+
+def score_emotions(tokens: list[str]) -> dict[str, float]:
+    """
+    Retourne un score normalisé [0-1] par émotion selon la présence
+    des mots du lexique dans les tokens filtrés.
+    """
+    if not tokens:
+        return {e: 0.0 for e in EMOTION_LEXICON}
+    token_set = set(tokens)
+    return {
+        emotion: safe_div(len(token_set & words), len(tokens))
+        for emotion, words in EMOTION_LEXICON.items()
+    }
+
+def score_lexical_fields(tokens: list[str]) -> dict[str, float]:
+    """
+    Retourne un score normalisé [0-1] par champ lexical.
+    """
+    if not tokens:
+        return {f: 0.0 for f in LEXICAL_FIELDS}
+    token_set = set(tokens)
+    return {
+        field: safe_div(len(token_set & words), len(tokens))
+        for field, words in LEXICAL_FIELDS.items()
+    }
+
+def dominant_emotions(scores: dict[str, float], top_n: int = 3) -> list[str]:
+    """Retourne les N émotions dominantes (score > 0)."""
+    return [
+        e for e, s in sorted(scores.items(), key=lambda x: -x[1])
+        if s > 0
+    ][:top_n]

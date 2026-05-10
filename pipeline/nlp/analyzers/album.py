@@ -16,8 +16,24 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from pipeline.nlp.config import ALL_STOPWORDS
-from pipeline.nlp.helpers import avg, clean_lyrics, custom_tokenizer, filtered_tokens, safe_div
+from pipeline.nlp.helpers import avg, clean_lyrics, custom_tokenizer, filtered_tokens, safe_div,dominant_emotions
 
+
+# ── 8. Émotions & champs lexicaux ────────────────────────────────────────────
+def _avg_json_scores(rows: list[dict], key: str) -> dict[str, float]:
+    """Moyenne des scores JSON sur un ensemble de tracks."""
+    all_scores: list[dict] = []
+    for row in rows:
+        raw = row.get(key)
+        if raw:
+            try:
+                all_scores.append(json.loads(raw))
+            except Exception:
+                pass
+    if not all_scores:
+        return {}
+    keys = all_scores[0].keys()
+    return {k: avg([s[k] for s in all_scores if k in s]) for k in keys}
 
 def aggregate_album(
     album_id: int,
@@ -90,7 +106,7 @@ def aggregate_album(
         r["lda_dominant_topic"] = r["lda_topic_distribution"] = None
 
     try:
-        from models import get_sbert
+        from pipeline.nlp.models import get_sbert
         sbert = get_sbert()
         embs  = sbert.encode([clean_lyrics(l)[:512] for l in raw_lyrics_list])
         if len(embs) > 1:
@@ -130,5 +146,13 @@ def aggregate_album(
     r["avg_hapax_ratio"]       = avg(_col("hapax_ratio"))
     hapax = sum(1 for _, c in freq_all.items() if c == 1)
     r["album_hapax_ratio"] = safe_div(hapax, len(set(all_tokens)))
+    
+    avg_emotion = _avg_json_scores(track_rows, "emotion_scores")
+    avg_lex     = _avg_json_scores(track_rows, "lexical_field_scores")
+
+    r["avg_emotion_scores"]       = json.dumps(avg_emotion, ensure_ascii=False)
+    r["dominant_emotions"]        = json.dumps(dominant_emotions(avg_emotion), ensure_ascii=False)
+    r["avg_lexical_field_scores"] = json.dumps(avg_lex, ensure_ascii=False)
+    r["dominant_lexical_fields"]  = json.dumps(dominant_emotions(avg_lex), ensure_ascii=False)
 
     return r

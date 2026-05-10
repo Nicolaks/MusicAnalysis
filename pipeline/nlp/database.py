@@ -60,8 +60,9 @@ def load_tracks_to_analyze(
         SELECT tf.track_id, tf.artist_id, tf.album_id,
                tf.track_name, tf.artist_name, tf.album_name,
                tf.album_release_year, tf.lyrics,
-               NULL AS isrc, NULL AS artist_isrc
+               id.isrc, NULL AS artist_isrc
         FROM tracks_flat tf
+        LEFT JOIN isrc_data id ON id.track_id = tf.track_id
         WHERE tf.lyrics IS NOT NULL
         {artist_filter}
         {exists_filter}
