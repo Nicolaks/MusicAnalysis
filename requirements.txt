@@ -31,3 +31,4 @@ sentence-transformers
 vaderSentiment
 tiktoken
 sentencepiece
+statsmodels
