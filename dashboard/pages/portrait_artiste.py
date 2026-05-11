@@ -47,13 +47,34 @@ def render():
     col1, col2 = st.columns([1.4, 2], gap="small")
 
     with col1:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Carte d\'identité</div>', unsafe_allow_html=True)
         st.plotly_chart(identity_card_chart(artist, corpus), use_container_width=True)
+        with st.expander("Comprendre les métriques"):
+            st.markdown("""
+            - **Diversité lexicale (TTR)** :  
+            `0 → 1`  
+            Plus la valeur est élevée, plus le vocabulaire est varié.
+
+            - **Densité de rimes** :  
+            `0 → 1`  
+            Mesure la fréquence des schémas de rimes dans les paroles.
+
+            - **Complexité syntaxique** :  
+            Valeur généralement comprise entre `5 → 25`  
+            Basée sur la longueur et la structure des phrases.
+
+            - **Répétition** :  
+            `0 → 1`  
+            Plus la valeur est élevée, plus les paroles utilisent des répétitions.
+
+            - **Charge émotionnelle** :  
+            `-100 → +100`  
+            Négatif = tonalité sombre  
+            Positif = tonalité lumineuse.
+            """)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Champs lexicaux</div>', unsafe_allow_html=True)
         lex_raw = artist.get("avg_lexical_field_scores")
         try:
@@ -74,7 +95,6 @@ def render():
     col4, col5, col6 = st.columns([1, 1, 1.5], gap="small")
 
     with col4:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Top 20 mots</div>', unsafe_allow_html=True)
         words = parse_top_words(artist.get("top30_words"))
         if words:
@@ -84,7 +104,6 @@ def render():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col5:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Émotions globales</div>', unsafe_allow_html=True)
         emo_scores = artist.get("avg_emotion_scores")
         if emo_scores:
@@ -103,10 +122,7 @@ def render():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col6:
-
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">Carte émotionnelle de la discographie</div>',
-                    unsafe_allow_html=True)
+        st.markdown('<div class="card-title">Carte émotionnelle de la discographie</div>', unsafe_allow_html=True)
         if not albums.empty:
             df_heat = albums_emotion_matrix(albums_streams.head(10))
             if not df_heat.empty:
@@ -119,7 +135,6 @@ def render():
 
     # ── Infos stylométrie ──────────────────────────────────────────────────────
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Métriques stylométriques détaillées</div>',
                 unsafe_allow_html=True)
     cols_stylo = [

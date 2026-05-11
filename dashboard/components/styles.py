@@ -56,6 +56,22 @@ section[data-testid="stSidebar"] { background: #ffffff !important; border-right:
     margin-bottom: 14px; letter-spacing: -.01em;
 }
 
+.card-title {
+    background: white;
+    border-radius: 16px;
+    padding: 10px 11px;
+    border: 1px solid #e8ede9;
+    font-size: 1rem;
+    font-weight: 400;
+    color: #1a1a1a;
+    text-align: justify;
+    line-height: 1.4;
+    margin-bottom: 14px;
+    align-items: center;
+    border-bottom: 4px solid #dfe7e2;
+    padding-left: 22px;
+}
+
 /* ── Track rows ── */
 .track-row {
     display: flex; align-items: center; gap: 10px;
