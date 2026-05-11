@@ -51,26 +51,33 @@ def render():
         st.plotly_chart(identity_card_chart(artist, corpus), use_container_width=True)
         with st.expander("Comprendre les métriques"):
             st.markdown("""
-            - **Diversité lexicale (TTR)** :  
-            `0 → 1`  
-            Plus la valeur est élevée, plus le vocabulaire est varié.
+            - **Mots / chanson** :  
+            `≈ 50 → 2000+`  
+            Volume moyen de texte par morceau. Indique la densité globale des paroles.
 
-            - **Densité de rimes** :  
+            - **Diversité (TTR)** :  
             `0 → 1`  
-            Mesure la fréquence des schémas de rimes dans les paroles.
+            Mesure la variété du vocabulaire. Plus c’est élevé, plus l’artiste utilise de mots différents.
 
-            - **Complexité syntaxique** :  
-            Valeur généralement comprise entre `5 → 25`  
-            Basée sur la longueur et la structure des phrases.
+            - **Rimes** :  
+            `0 → 1`  
+            Fréquence des schémas de rimes dans les paroles. Indique le niveau de travail phonique.
+
+            - **Richesse vocab. (hapax)** :  
+            `0 → 1`  
+            Proportion de mots utilisés une seule fois. Mesure la créativité lexicale et le renouvellement du vocabulaire.
+
+            - **Auto-référence** :  
+            `0 → 1`  
+            Proportion de “je/j’”. Indique le degré d’introspection et de narration personnelle.
 
             - **Répétition** :  
             `0 → 1`  
-            Plus la valeur est élevée, plus les paroles utilisent des répétitions.
+            Mesure la redondance des mots ou phrases. Élevé = refrains / motifs répétés / hook-centric.
 
-            - **Charge émotionnelle** :  
-            `-100 → +100`  
-            Négatif = tonalité sombre  
-            Positif = tonalité lumineuse.
+            - **Complexité mots** :  
+            `≈ 3 → 8+ lettres`  
+            Longueur moyenne des mots. Indique la sophistication lexicale et le niveau de langage.
             """)
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -102,6 +109,8 @@ def render():
         else:
             st.info("Aucun mot disponible.")
         st.markdown('</div>', unsafe_allow_html=True)
+        
+# top idf avec explication
 
     with col5:
         st.markdown('<div class="card-title">Émotions globales</div>', unsafe_allow_html=True)
@@ -119,6 +128,22 @@ def render():
                 st.caption(f"Émotion dominante · **{dominant}**")
         else:
             st.info("Données émotions absentes.")
+        with st.expander("Comprendre l’analyse émotionnelle"):
+            st.markdown("""
+            Cette visualisation représente la répartition moyenne des émotions détectées dans les paroles de l’artiste.
+
+            ### Émotions analysées
+            - **Joie** : énergie positive, optimisme
+            - **Tristesse** : mélancolie, douleur émotionnelle
+            - **Colère** : agressivité, tension
+            - **Peur** : anxiété, insécurité
+            - **Surprise** : intensité émotionnelle soudaine
+            - **Dégoût** : rejet, mépris
+
+            ### Lecture du graphique
+            - Plus une section est grande, plus cette émotion est dominante
+            - Les scores représentent une intensité émotionnelle moyenne sur l’ensemble du catalogue analysé
+            """)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col6:
@@ -147,8 +172,44 @@ def render():
         ("avg_word_length",    "Long. mot moy."),
         ("avg_hapax_ratio",    "Ratio hapax"),
     ]
-    c = st.columns(4, gap="small")
-    for i, (col_key, col_label) in enumerate(cols_stylo):
+    
+    cols_stylo_expl = [
+        "<b>Ratio noms</b> : structure plus descriptive et statique du texte (univers, objets, scènes). <br>"
+        "→ <i>Élevé > 0.35 : univers très imagé / descriptif</i> <br> → <i>faible < 0.20 : texte plus narratif ou actionnel</i>",
+
+        "<b>Ratio verbes</b> : intensité narrative et dynamique du discours. <br>"
+        "→ <i>Élevé > 0.35 : storytelling fort, mouvement</i> <br> → <i>faible < 0.20 : texte contemplatif ou descriptif</i>",
+
+        "<b>Ratio adj.</b> : richesse descriptive et précision des images. <br>"
+        "→ <i>Élevé > 0.15 : écriture très visuelle et détaillée</i> <br> → <i>faible < 0.08 : style plus brut / minimaliste</i>",
+
+        "<b>Ratio je/j’</b> : présence de l’artiste dans le texte. <br>"
+        "→ <i>Élevé > 0.15 : introspection forte, écriture personnelle</i> <br> → <i>faible < 0.05 : narration externe ou impersonnelle</i>",
+
+        "<b>Densité rimes</b> : travail de musicalité et de structure sonore. <br>"
+        "→ <i>Élevé > 0.40 : écriture très travaillée / technique</i> <br> → <i>faible < 0.20 : style plus libre ou parlé</i>",
+
+        "<b>Syl./ligne</b> : complexité rythmique et densité du flow. <br>"
+        "→ <i>Élevé > 12 : flow dense et technique</i> <br> → <i>faible < 8 : delivery simple et direct</i>",
+
+        "<b>Long. mot moy.</b> : sophistication lexicale globale. <br>"
+        "→ <i>Élevé > 5 : vocabulaire riche et soutenu</i> <br> → <i>faible < 4.2 : langage simple et accessible</i>",
+
+        "<b>Ratio hapax</b> : créativité lexicale et diversité des mots. <br>"
+        "→ <i>Élevé > 0.35 : forte originalité lexicale</i> <br> → <i>faible < 0.2 : répétition de patterns et refrains</i>",
+    ]
+    
+    c = st.columns(2, gap="small")
+    for i, ((col_key, col_label), expl) in enumerate(zip(cols_stylo, cols_stylo_expl)):
         val = safe_float(artist.get(col_key, None))
-        c[i % 4].metric(col_label, f"{val:.3f}" if val else "—")
+        display_val = f"{val:.3f}" if val is not None else "—"
+
+        with c[i % 2]:
+            st.metric(col_label, display_val)
+            st.markdown(
+                f"<div style='font-size:0.8em; opacity:0.7; margin-top:-8px'>{expl}</div>",
+                unsafe_allow_html=True
+            )
+            st.markdown("<div style='height:-2px'></div><hr style='opacity:0.5'>", unsafe_allow_html=True)
+
     st.markdown('</div>', unsafe_allow_html=True)

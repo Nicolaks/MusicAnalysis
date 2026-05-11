@@ -38,6 +38,4 @@ def artist_kpis(artist: pd.Series):
          "sub": f"TTR : {ttr:.3f}", "featured": True},
         {"label": "Albums analysés",  "value": str(albums), "sub": "discographie"},
         {"label": "Titres analysés",  "value": str(tracks), "sub": "paroles"},
-        {"label": "Ton positif",      "value": f"{pct_pos:.1f}%",
-         "sub": f"négatif : {pct_neg:.1f}%"},
     ])
