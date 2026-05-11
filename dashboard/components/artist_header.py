@@ -1,25 +1,4 @@
 import streamlit as st
-
-
-
-# def artist_header(artist, image_url):
-
-#     name = artist["artist_name"]
-
-#     html = f"""
-#     <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;">
-#         <img src="{image_url}"
-#             style="width:120px;height:120px;border-radius:50%;
-#                    object-fit:cover;border:4px solid #5dbf8a;">
-
-#         <div>
-#             <h2 style="margin:0;">{name}</h2>
-#         </div>
-#     </div>
-#     """
-
-#     st.markdown(html, unsafe_allow_html=True)
-    
     
 def artist_header(artist, image_url):
 
