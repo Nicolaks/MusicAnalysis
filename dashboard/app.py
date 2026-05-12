@@ -26,6 +26,14 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+hide_pages = """
+<style>
+[data-testid="stSidebarNav"] {display: none;}
+[data-testid="stHeader"] {display: none;}
+</style>
+"""
+st.markdown(hide_pages, unsafe_allow_html=True)
+
 inject_global_css()
 
 # ── Navigation state ─────────────────────────────────────────────────────────
