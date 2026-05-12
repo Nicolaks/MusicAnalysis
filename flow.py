@@ -31,19 +31,22 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 DB_PATH = Path("data/warehouse.duckdb")
+SAMPLES_DIR = Path("data/samples")
 
 ARTISTS = [
-    "PLK",
-    "SDM",
-    "DAMSO",
-    "Ninho",
-    "Orelsan",
-    "Booba",
-    "SCH",
-    "PNL",
-    "NISKA",
-    "Theodora",
-    "Bad Bunny",
+    # "PLK",
+    # "SDM",
+    # "DAMSO",
+    # "Ninho",
+    # "Orelsan",
+    # "Booba",
+    # "SCH",
+    # "PNL",
+    # "NISKA",
+    # "Theodora",
+    "Diams",
+    "GIMS",
+    "JUL",
 ]
 
 # ─────────────────────────────────────────────
@@ -120,6 +123,106 @@ def lyrics_analyser_process():
     lyrics_analyzer.run(db_path=DB_PATH, artists=ARTISTS)
     logger.info("Analyse des paroles terminée")
     
+def delete_artist_from_db(db_path: str, artist_name: str):
+    """
+    Supprime toutes les lignes liées à un artiste
+    dans toutes les tables de la base DuckDB.
+
+    Parameters
+    ----------
+    db_path : str
+        Chemin vers la base DuckDB.
+    artist_name : str
+        Nom exact de l'artiste à supprimer.
+    """
+
+    tables_with_artist = {
+        "albums_analysis": "artist_name",
+        "artists_analysis": "artist_name",
+        "audio_features_local": "artist_name",
+        "isrc_data": "artist_name",
+        "kworb_streams": "artist_name",
+        "ranking_data": "artist_name",
+        "samples_index": "artist_name",
+        "tracks_analysis": "artist_name",
+        "tracks_flat": "artist_name",
+    }
+    conn = duckdb.connect(db_path)
+
+    try:
+        logger.info(f"\n🗑️ Suppression de l'artiste : {artist_name}")
+        total_deleted = 0
+
+        for table, column in tables_with_artist.items():
+            # Vérifie le nombre de lignes avant suppression
+            count_query = f"""
+                SELECT COUNT(*)
+                FROM {table}
+                WHERE LOWER({column}) = LOWER(?)
+            """
+            row_count = conn.execute(count_query, [artist_name]).fetchone()[0]
+            if row_count > 0:
+                delete_query = f"""
+                    DELETE FROM {table}
+                    WHERE LOWER({column}) = LOWER(?)
+                """
+                conn.execute(delete_query, [artist_name])
+                logger.info(f"✅ {table:<25} -> {row_count} lignes supprimées")
+                total_deleted += row_count
+
+            else:
+                logger.info(f"⚪ {table:<25} -> aucune ligne")
+
+        conn.commit()
+        logger.info(f"\n🎯 Total supprimé : {total_deleted} lignes")
+
+    except Exception as e:
+        conn.rollback()
+        logger.info(f"\n❌ Erreur : {e}")
+
+    finally:
+        conn.close()
+        
+def cleanup_samples(samples_dir: Path = SAMPLES_DIR) -> None:
+    """
+    Étape 8 : Supprime l'intégralité du dossier data/samples/ après analyse.
+    Appelée automatiquement à la fin de run() pour libérer l'espace disque.
+    Les fichiers sont déjà traités et leurs features stockées en base.
+    """
+    logger.info("=" * 60)
+    logger.info("Nettoyage du dossier samples : %s", samples_dir.resolve())
+ 
+    if not samples_dir.exists():
+        logger.info("Dossier samples introuvable, rien à supprimer.")
+        return
+ 
+    deleted_files = 0
+    deleted_dirs  = 0
+ 
+    for item in sorted(samples_dir.rglob("*"), reverse=True):
+        try:
+            if item.is_file():
+                item.unlink()
+                deleted_files += 1
+                logger.info("    🗑 Fichier supprimé : %s", item.name)
+            elif item.is_dir():
+                item.rmdir()   # ne supprime que si vide (rglob reverse garantit l'ordre)
+                deleted_dirs += 1
+                logger.info("    📁 Dossier supprimé : %s", item.name)
+        except OSError as e:
+            logger.warning("    ⚠️ Impossible de supprimer %s : %s", item, e)
+ 
+    # Supprime le dossier racine samples/ lui-même s'il est vide
+    try:
+        samples_dir.rmdir()
+        logger.info("    📁 Dossier racine supprimé : %s", samples_dir.name)
+    except OSError:
+        logger.warning("    ⚠️ Dossier racine non vide, conservé : %s", samples_dir)
+ 
+    logger.info("Nettoyage terminé : %d fichier(s) | %d dossier(s) supprimés",
+                deleted_files, deleted_dirs)
+    logger.info("=" * 60)
+    
 # ─────────────────────────────────────────────
 # Orchestration et Audit
 # ─────────────────────────────────────────────
@@ -156,6 +259,7 @@ def run():
     get_streams()
     audio_features_analysis()
     lyrics_analyser_process()
+    cleanup_samples(samples_dir=SAMPLES_DIR)
     
 
 if __name__ == "__main__":
@@ -164,7 +268,10 @@ if __name__ == "__main__":
     #query("DROP TABLE tracks_analysis")
     #query("DROP TABLE albums_analysis")
     #query("DROP TABLE artists_analysis")
+    #delete_artist_from_db(DB_PATH, "Diam’s")
     run()
+    #delete_artist_from_db(DB_PATH, "GIMS")
+    #delete_artist_from_db(DB_PATH, "Jul")
     #query("SHOW TABLES")
     get_audit_csv(True)
     get_db_table_schema()
