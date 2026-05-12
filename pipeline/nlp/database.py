@@ -46,10 +46,29 @@ def load_tracks_to_analyze(
 
     artist_filter = ""
     params: list = []
+    
     if artists:
-        artist_filter = "AND LOWER(tf.artist_name) IN (%s)" % ", ".join("?" * len(artists))
-        params = [a.lower() for a in artists]
+        normalized_artists = [
+            (
+                a.lower()
+                .replace("'", "")
+                .replace("’", "")
+                .replace("-", " ")
+                .strip()
+            )
+            for a in artists
+        ]
+        placeholders = ", ".join("?" * len(normalized_artists))
+        artist_filter = f"""
+            AND REPLACE(
+                    REPLACE(
+                        REPLACE(LOWER(tf.artist_name), '''', ''),
+                    '’', ''),
+                '-', ' '
+            ) IN ({placeholders})
+        """
 
+    params = normalized_artists
     exists_filter = "" if rerun else """
         AND NOT EXISTS (
             SELECT 1 FROM tracks_analysis ta

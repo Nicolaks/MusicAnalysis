@@ -248,28 +248,28 @@ def render():
     
     cols_stylo_expl = [
         "<b>Ratio noms</b> : structure plus descriptive et statique du texte (univers, objets, scènes). <br>"
-        "→ <i>Élevé > 0.35 : univers très imagé / descriptif</i> <br> → <i>faible < 0.20 : texte plus narratif ou actionnel</i>",
+        "→ <i>Élevé > 0.28 : univers très imagé / descriptif</i> <br> → <i>faible < 0.20 : texte plus narratif ou actionnel</i>",
 
         "<b>Ratio verbes</b> : intensité narrative et dynamique du discours. <br>"
-        "→ <i>Élevé > 0.35 : storytelling fort, mouvement</i> <br> → <i>faible < 0.20 : texte contemplatif ou descriptif</i>",
+        "→ <i>Élevé > 0.14 : storytelling fort, mouvement</i> <br> → <i>faible < 0.08 : texte contemplatif ou descriptif</i>",
 
         "<b>Ratio adj.</b> : richesse descriptive et précision des images. <br>"
-        "→ <i>Élevé > 0.15 : écriture très visuelle et détaillée</i> <br> → <i>faible < 0.08 : style plus brut / minimaliste</i>",
+        "→ <i>Élevé > 0.08 : écriture très visuelle et détaillée</i> <br> → <i>faible < 0.05 : style plus brut / minimaliste</i>",
 
         "<b>Ratio je/j’</b> : présence de l’artiste dans le texte. <br>"
-        "→ <i>Élevé > 0.15 : introspection forte, écriture personnelle</i> <br> → <i>faible < 0.05 : narration externe ou impersonnelle</i>",
+        "→ <i>Élevé > 0.15 : introspection forte, écriture personnelle</i> <br> → <i>faible < 0.03 : narration externe ou impersonnelle</i>",
 
         "<b>Densité rimes</b> : travail de musicalité et de structure sonore. <br>"
-        "→ <i>Élevé > 0.40 : écriture très travaillée / technique</i> <br> → <i>faible < 0.20 : style plus libre ou parlé</i>",
+        "→ <i>Élevé > 1.3 : écriture très travaillée / technique</i> <br> → <i>faible < 0.80 : style plus libre ou parlé</i>",
 
         "<b>Syl./ligne</b> : complexité rythmique et densité du flow. <br>"
         "→ <i>Élevé > 12 : flow dense et technique</i> <br> → <i>faible < 8 : delivery simple et direct</i>",
 
         "<b>Long. mot moy.</b> : sophistication lexicale globale. <br>"
-        "→ <i>Élevé > 5 : vocabulaire riche et soutenu</i> <br> → <i>faible < 4.2 : langage simple et accessible</i>",
+        "→ <i>Élevé > 5 : vocabulaire riche et soutenu</i> <br> → <i>faible < 4.3 : langage simple et accessible</i>",
 
         "<b>Ratio hapax</b> : créativité lexicale et diversité des mots. <br>"
-        "→ <i>Élevé > 0.35 : forte originalité lexicale</i> <br> → <i>faible < 0.2 : répétition de patterns et refrains</i>",
+        "→ <i>Élevé > 0.65 : forte originalité lexicale</i> <br> → <i>faible < 0.45 : répétition de patterns et refrains</i>",
     ]
     
     c = st.columns(2, gap="small")
