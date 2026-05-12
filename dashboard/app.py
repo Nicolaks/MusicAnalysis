@@ -64,15 +64,6 @@ with st.sidebar:
         style="width:100%;display:block;">
     </div>
     """, unsafe_allow_html=True)
-    st.markdown("""
-<div style="display:flex;align-items:center;gap:10px;padding:4px 0 20px;">
-  <div style="width:34px;height:34px;background:#1a5c38;border-radius:10px;
-              display:flex;align-items:center;justify-content:center;">
-    <span style="font-size:18px">🎤</span>
-  </div>
-  <span style="font-size:15px;font-weight:600;color:#1a1a1a;">Music NLP</span>
-</div>
-""", unsafe_allow_html=True)
 
     st.markdown('<div style="font-size:10px;font-weight:600;color:#aaa;letter-spacing:.08em;padding:0 4px;margin-bottom:6px">MENU</div>', unsafe_allow_html=True)
 
@@ -89,20 +80,20 @@ with st.sidebar:
 
     stats = get_corpus_stats()
     st.markdown(f"""
-<div style="background:#f0f7f3;border-radius:12px;padding:12px 14px;">
-  <div style="font-size:12px;color:#555;margin-bottom:6px;font-weight:500">Corpus analysé</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-    <div style="font-size:11px;color:#888">Artistes</div>
-    <div style="font-size:12px;font-weight:600;color:#1a5c38;text-align:right">{stats['total_artists']}</div>
-    <div style="font-size:11px;color:#888">Albums</div>
-    <div style="font-size:12px;font-weight:600;color:#1a5c38;text-align:right">{stats['total_albums']}</div>
-    <div style="font-size:11px;color:#888">Titres</div>
-    <div style="font-size:12px;font-weight:600;color:#1a5c38;text-align:right">{stats['total_tracks']}</div>
-    <div style="font-size:11px;color:#888">Mots</div>
-    <div style="font-size:12px;font-weight:600;color:#1a5c38;text-align:right">{stats['total_words']:,}</div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
+        <div style="background:#f0f7f3;border-radius:12px;padding:12px 14px;">
+        <div style="font-size:12px;color:#555;margin-bottom:6px;font-weight:500">Corpus analysé</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div style="font-size:11px;color:#888">Artistes</div>
+            <div style="font-size:12px;font-weight:600;color:#1a5c38;text-align:right">{stats['total_artists']}</div>
+            <div style="font-size:11px;color:#888">Albums</div>
+            <div style="font-size:12px;font-weight:600;color:#1a5c38;text-align:right">{stats['total_albums']}</div>
+            <div style="font-size:11px;color:#888">Titres</div>
+            <div style="font-size:12px;font-weight:600;color:#1a5c38;text-align:right">{stats['total_tracks']}</div>
+            <div style="font-size:11px;color:#888">Mots</div>
+            <div style="font-size:12px;font-weight:600;color:#1a5c38;text-align:right">{stats['total_words']:,}</div>
+        </div>
+        </div>
+    """, unsafe_allow_html=True)
 
 
 # ── Routing ───────────────────────────────────────────────────────────────────
@@ -141,7 +132,6 @@ if page_key == "dashboard":
     col1, col2, col3 = st.columns([1.5, 1, 1], gap="small")
 
     with col1:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Top artistes — vocabulaire carrière</div>',
                     unsafe_allow_html=True)
         if not df_all.empty and "career_vocabulary_size" in df_all.columns:
@@ -156,7 +146,6 @@ if page_key == "dashboard":
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Ton du corpus</div>', unsafe_allow_html=True)
         if not df_all.empty:
             avg_pos = df_all["avg_sentiment_positive"].mean() if "avg_sentiment_positive" in df_all.columns else 0
@@ -171,7 +160,6 @@ if page_key == "dashboard":
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col3:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Top artistes — TTR</div>', unsafe_allow_html=True)
         if not df_all.empty and "career_ttr" in df_all.columns:
             from components.charts import artists_compare_bar
@@ -190,7 +178,6 @@ if page_key == "dashboard":
     col4, col5 = st.columns([1.2, 1], gap="small")
 
     with col4:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Distribution émotions — corpus global</div>',
                     unsafe_allow_html=True)
         if not df_all.empty:
@@ -226,7 +213,6 @@ if page_key == "dashboard":
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col5:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Accès rapide</div>', unsafe_allow_html=True)
         shortcuts = [
             ("portrait",    "🎤 Portrait artiste",     "Explorer la signature d'un artiste"),
@@ -237,11 +223,11 @@ if page_key == "dashboard":
         ]
         for key, label, desc in shortcuts:
             st.markdown(f"""
-<div onclick="" style="padding:8px 10px;border-radius:10px;border:1px solid #e8ede9;
-     margin-bottom:6px;cursor:pointer;background:#fafcfa;">
-  <div style="font-size:12px;font-weight:600;color:#1a5c38">{label}</div>
-  <div style="font-size:11px;color:#aaa">{desc}</div>
-</div>""", unsafe_allow_html=True)
+                <div onclick="" style="padding:8px 10px;border-radius:10px;border:1px solid #e8ede9;
+                    margin-bottom:6px;cursor:pointer;background:#fafcfa;">
+                <div style="font-size:12px;font-weight:600;color:#1a5c38">{label}</div>
+                <div style="font-size:11px;color:#aaa">{desc}</div>
+                </div>""", unsafe_allow_html=True)
             if st.button(f"→ {label}", key=f"shortcut_{key}", width="content"):
                 st.session_state.page = key
                 st.rerun()
