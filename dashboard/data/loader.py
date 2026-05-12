@@ -52,6 +52,43 @@ def get_artist_url(artist_name: str, db_path: Path = DB_PATH) -> str | None:
     except Exception:
         return None
 
+def get_audio_radar(artist_name: str, db_path: Path = DB_PATH) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Retourne (artist_avg, corpus_avg) — chacun est un DataFrame 1 ligne
+    avec les moyennes des features audio pour le radar chart.
+    """
+    cols = ", ".join([
+        "AVG(tempo) as tempo",
+        "AVG(beat_strength) as beat_strength",
+        "AVG(brightness) as brightness",
+        "AVG(warmth) as warmth",
+        "AVG(roughness) as roughness",
+        "AVG(onset_rate) as onset_rate",
+    ])
+
+    try:
+        con = _con(db_path)
+        if not _table_exists(con, "audio_features_local"):
+            con.close()
+            return pd.DataFrame(), pd.DataFrame()
+
+        artist_avg = con.execute(f"""
+            SELECT {cols}
+            FROM audio_features_local
+            WHERE artist_name = ?
+        """, [artist_name]).df()
+
+        corpus_avg = con.execute(f"""
+            SELECT {cols}
+            FROM audio_features_local
+        """).df()
+
+        con.close()
+        return artist_avg, corpus_avg
+
+    except Exception:
+        return pd.DataFrame(), pd.DataFrame()
+
 def get_artist(artist_name: str, db_path: Path = DB_PATH) -> pd.Series:
     try:
         con = _con(db_path)

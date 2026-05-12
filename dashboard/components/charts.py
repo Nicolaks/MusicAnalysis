@@ -28,32 +28,113 @@ def _apply(fig: go.Figure, height: int = 260, title: str = "") -> go.Figure:
 
 # ── Radar ───────────────────────────────────────────────────────────────────
 
-def radar_chart(values: dict, title: str = "", compare: dict | None = None) -> go.Figure:
-    cats = list(values.keys()) + [list(values.keys())[0]]
-    vals = list(values.values()) + [list(values.values())[0]]
+RADAR_AUDIO_KEYS = {
+    "tempo":          "Rapidité",
+    "beat_strength":  "Puissance",
+    "brightness":     "Brillance",
+    "warmth":         "Chaleur",
+    "roughness":      "Rugosité",
+    "onset_rate":     "Flow",
+}
+
+# Plages réelles pour normalisation absolue (évite l'écrasement sur un seul artiste)
+RADAR_AUDIO_RANGES = {
+    "tempo":         (60,   199),
+    "beat_strength": (1.7,  16.4),
+    "brightness":    (0.007, 0.552),
+    "warmth":        (0.137, 0.709),
+    "roughness":     (0.108, 2.087),
+    "onset_rate":    (0.033, 7.07),
+}
+
+def normalize_radar_audio(values: dict) -> dict:
+    """Normalisation sur plages réelles plutôt que min/max local."""
+    result = {}
+    for k, v in values.items():
+        mn, mx = RADAR_AUDIO_RANGES.get(k, (0, 1))
+        if mx == mn:
+            result[k] = 0.5
+        else:
+            result[k] = float(np.clip((v - mn) / (mx - mn), 0, 1))
+    return result
+
+
+def audio_radar_chart(artist_df: pd.DataFrame, compare_df: pd.DataFrame | None = None) -> go.Figure:
+    if artist_df.empty:
+        return go.Figure()
+
+    keys = list(RADAR_AUDIO_KEYS.keys())
+    available = [k for k in keys if k in artist_df.columns]
+    if not available:
+        return go.Figure()
+
+    # ── Moyennes et écarts-type de l'artiste ──
+    means = {k: float(artist_df[k].mean()) for k in available}
+    stds  = {k: float(artist_df[k].std(ddof=0)) for k in available}
+
+    norm_means     = normalize_radar_audio(means)
+    norm_means_std = normalize_radar_audio({k: means[k] + stds[k] for k in available})
+    norm_means_std = {k: min(v, 1.0) for k, v in norm_means_std.items()}  # clip à 1
+
+    labeled       = {RADAR_AUDIO_KEYS[k]: norm_means[k]     for k in available}
+    labeled_upper = {RADAR_AUDIO_KEYS[k]: norm_means_std[k] for k in available}
+
+    cats       = list(labeled.keys())       + [list(labeled.keys())[0]]
+    vals       = list(labeled.values())     + [list(labeled.values())[0]]
+    vals_upper = list(labeled_upper.values()) + [list(labeled_upper.values())[0]]
+
     fig = go.Figure()
+
+    # Zone std (halo autour de la moyenne)
     fig.add_trace(go.Scatterpolar(
-        r=vals, theta=cats, fill="toself", name="Artiste",
+        r=vals_upper, theta=cats,
+        fill="toself",
+        fillcolor="rgba(26,92,56,0.08)",
+        line=dict(width=0),
+        showlegend=False,
+        hoverinfo="skip",
+    ))
+
+    # Moyenne artiste
+    fig.add_trace(go.Scatterpolar(
+        r=vals, theta=cats,
+        fill="toself", name="Artiste",
         line=dict(color=COLORS["primary"], width=2),
         fillcolor="rgba(26,92,56,0.18)",
+        hovertemplate="<b>%{theta}</b><br>Score : %{r:.2f}<extra></extra>",
     ))
-    if compare:
-        c_cats = list(compare.keys()) + [list(compare.keys())[0]]
-        c_vals = list(compare.values()) + [list(compare.values())[0]]
+
+    # ── Corpus moyen (optionnel) ──
+    if compare_df is not None and not compare_df.empty:
+        c_means      = {k: float(compare_df[k].mean()) for k in available}
+        c_normalized = normalize_radar_audio(c_means)
+        c_labeled    = {RADAR_AUDIO_KEYS[k]: c_normalized[k] for k in available}
+        c_cats = list(c_labeled.keys())   + [list(c_labeled.keys())[0]]
+        c_vals = list(c_labeled.values()) + [list(c_labeled.values())[0]]
+
         fig.add_trace(go.Scatterpolar(
-            r=c_vals, theta=c_cats, fill="toself", name="Corpus moyen",
+            r=c_vals, theta=c_cats,
+            fill="toself", name="Corpus moyen",
             line=dict(color="#888780", width=1.5, dash="dot"),
-            fillcolor="rgba(136,135,128,0.12)",
+            fillcolor="rgba(136,135,128,0.10)",
+            hovertemplate="<b>%{theta}</b><br>Corpus : %{r:.2f}<extra></extra>",
         ))
+
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 1], tickfont=dict(size=9), gridcolor="#eee"),
-            angularaxis=dict(tickfont=dict(size=10, color="#555")),
+            radialaxis=dict(
+                visible=True, range=[0, 1],
+                tickfont=dict(size=12), gridcolor="#eee",
+                tickvals=[0.25, 0.5, 0.75, 1.0],
+                ticktext=["25%", "50%", "75%", "100%"],
+            ),
+            angularaxis=dict(tickfont=dict(size=11, color="#555")),
             bgcolor="rgba(0,0,0,0)",
         ),
-        showlegend=bool(compare),
-        legend=dict(orientation="h", y=-0.15, font=dict(size=10)),
-        **_LAYOUT, height=280,
+        showlegend=True,
+        legend=dict(orientation="h", y=-0.15, font=dict(size=13)),
+        **{**_LAYOUT, "margin": dict(t=10, b=40, l=40, r=40)},
+        height=400,
     )
     return fig
 
@@ -138,12 +219,12 @@ def emotion_heatmap(df: pd.DataFrame) -> go.Figure:
         showlegend=False,
         xaxis=dict(
             tickangle=-35,
-            tickfont=dict(size=9, color="#888"),
+            tickfont=dict(size=13, color="#888"),
             showgrid=False,
             zeroline=False,
         ),
         yaxis=dict(
-            tickfont=dict(size=10, color="#555"),
+            tickfont=dict(size=15, color="#555"),
             showgrid=True,
             gridcolor="#f0f0f0",
             gridwidth=1,

@@ -9,9 +9,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from data.transforms import (parse_top_words, parse_style_signature,
                               normalize_radar, albums_emotion_matrix,
                               safe_float, streams_label)
-from components.charts import (radar_chart, top_words_bar, emotion_heatmap,
-                                sentiment_donut, lexical_bars, emotion_donut_chart, identity_card_chart)
-from data.loader import get_artist, get_albums, get_tracks, get_artist_url, get_albums_with_streams, get_corpus_stats
+from components.charts import (top_words_bar, emotion_heatmap,
+                                sentiment_donut, lexical_bars, emotion_donut_chart, identity_card_chart, audio_radar_chart)
+from data.loader import get_artist, get_albums, get_tracks, get_artist_url, get_albums_with_streams, get_corpus_stats, get_audio_radar
 from components.metrics import artist_kpis
 from components.filters import artist_selector
 from config import RADAR_KEYS, RADAR_DISPLAY, LEXICAL_FIELD_DISPLAY, EMOTION_DISPLAY
@@ -105,7 +105,7 @@ def render():
         st.markdown('<div class="card-title">Top 20 mots</div>', unsafe_allow_html=True)
         words = parse_top_words(artist.get("top30_words"))
         if words:
-            st.plotly_chart(top_words_bar(words[:20]), use_container_width=True)
+            st.plotly_chart(top_words_bar(words[:20]), use_container_width=True, key="top_words_freq")
         else:
             st.info("Aucun mot disponible.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -113,6 +113,15 @@ def render():
 # top idf avec explication
 
     with col5:
+        st.markdown('<div class="card-title">Top mots TF-IDF</div>', unsafe_allow_html=True)
+        words = parse_top_words(artist.get("tfidf_top_keywords"))
+        if words:
+            st.plotly_chart(top_words_bar(words[:20]), use_container_width=True, key="top_tfidf")
+        else:
+            st.info("Aucun mot disponible.")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col6:
         st.markdown('<div class="card-title">Émotions globales</div>', unsafe_allow_html=True)
         emo_scores = artist.get("avg_emotion_scores")
         if emo_scores:
@@ -128,6 +137,22 @@ def render():
                 st.caption(f"Émotion dominante · **{dominant}**")
         else:
             st.info("Données émotions absentes.")
+                    
+    exp_col1, exp_col2 = st.columns([0.55, 0.45])  # même ratio que col4/5/6
+
+    with exp_col1:
+        with st.expander("Comprendre le TOP 20 VS TF-IDF"):
+            st.markdown("""
+            **Top 20 mots** : Le Top 20 des mots utilisés affiche les termes les plus fréquents dans les paroles d’un artiste.
+            Il permet d’identifier rapidement les thèmes dominants, les habitudes d’écriture et le champ lexical principal de son univers musical. 
+            Cette analyse met en avant le vocabulaire le plus présent, mais pas forcément le plus distinctif.
+
+            **TF-IDF** : Le Top TF-IDF met en évidence les mots les plus caractéristiques d’un artiste par rapport au reste du corpus. 
+            Contrairement au simple comptage de fréquence, cette méthode valorise les termes fréquemment utilisés par l’artiste mais rares chez les autres. 
+            Elle permet ainsi d’identifier les éléments qui rendent son style et son univers lexical uniques.
+            """)
+    
+    with exp_col2:
         with st.expander("Comprendre l’analyse émotionnelle"):
             st.markdown("""
             Cette visualisation représente la répartition moyenne des émotions détectées dans les paroles de l’artiste.
@@ -146,16 +171,64 @@ def render():
             """)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with col6:
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+    with st.container():
         st.markdown('<div class="card-title">Carte émotionnelle de la discographie</div>', unsafe_allow_html=True)
         if not albums.empty:
-            df_heat = albums_emotion_matrix(albums_streams.head(10))
+            df_heat = albums_emotion_matrix(albums_streams.head(15))
             if not df_heat.empty:
                 st.plotly_chart(emotion_heatmap(df_heat), use_container_width=True)
             else:
                 st.info("Colonnes émotions absentes.")
         else:
             st.info("Aucun album disponible.")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with st.expander("Comment lire la carte émotionnelle ?"):
+        st.markdown("""
+                    ### Carte émotionnelle de la discographie
+
+                    La carte émotionnelle représente l’intensité des émotions détectées dans les paroles de chaque album.
+                    Les émotions (joie, tristesse, colère, peur, surprise, dégoût) sont affichées sur l’axe vertical et les albums sur l’axe horizontal. 
+                    Plus la couleur ou la taille de la bulle est importante, plus l’émotion est présente dans l’album concerné. 
+                    Cette visualisation permet d’identifier rapidement les émotions dominantes, les variations d’ambiance et l’évolution émotionnelle de l’artiste au fil de sa carrière.
+        """)
+        st.markdown('</div>', unsafe_allow_html=True)
+     
+    # ── Star chart        ──────────────────────────────────────────────────────   
+    
+    st.markdown('<div class="card-title">Empreinte sonore</div>', unsafe_allow_html=True) 
+    
+    artist_audio, corpus_audio = get_audio_radar(artist["artist_name"])
+    if not artist_audio.empty:
+        st.plotly_chart(
+            audio_radar_chart(artist_audio, compare_df=corpus_audio),
+            use_container_width=True,
+            key="audio_radar"
+        )
+    else:
+        st.info("Pas de données audio disponibles.")
+    with st.expander("Comment lire l'empreinte sonore ?"):
+        st.markdown("""
+        Ce radar représente la **signature acoustique moyenne** de l'artiste, 
+        calculée sur l'ensemble de ses extraits audio disponibles.
+        
+        **Les 6 dimensions :**
+        - **Rapidité** — tempo moyen en BPM. Un score élevé = sons rapides, urgents.
+        - **Puissance** — force des beats détectés. -> Élevé = rythmique marquée et percussive.
+        - **Brillance** — ratio d'énergie dans les hautes fréquences. -> Élevé = son aérien, crisp.
+        - **Chaleur** — ratio d'énergie dans les basses fréquences. -> Élevé = son chaud, grave.
+        - **Rugosité** — irrégularité spectrale. -> Élevé = saturation, distorsion, agressivité sonore.
+        - **Flow** — densité des attaques par seconde. -> Élevé = débit syllabique rapide et dense.
+        
+        **La zone verte claire** autour de la toile principale représente la variabilité 
+        (écart-type), plus elle est large sur un axe, plus l'artiste est **inconsistant** 
+        sur cette dimension selon les morceaux.
+        
+        **La toile grise pointillée** est la moyenne du corpus entier,
+        elle permet de situer l'artiste par rapport aux autres.
+        """)
         st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Infos stylométrie ──────────────────────────────────────────────────────
