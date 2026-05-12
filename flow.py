@@ -42,6 +42,8 @@ ARTISTS = [
     "SCH",
     "PNL",
     "NISKA",
+    "Theodora",
+    "Bad Bunny",
 ]
 
 # ─────────────────────────────────────────────
@@ -147,21 +149,21 @@ def get_audit_csv(enable: bool):
        
 def run():
     """Exécute l'intégralité du pipeline dans l'ordre logique des dépendances."""
-    #run_extract_genuis()
-    #run_extract_deezer()
-    #download_samples()
-    #merge_with_ranking()
-    #get_streams()
-    #audio_features_analysis()
+    run_extract_genuis()
+    run_extract_deezer()
+    download_samples()
+    merge_with_ranking()
+    get_streams()
+    audio_features_analysis()
     lyrics_analyser_process()
     
 
 if __name__ == "__main__":
-    # Point d'entrée : Exécution du flow complet puis génération de l'audit
+    """Point d'entrée : Exécution du flow complet puis génération de l'audit"""
     #query("DROP TABLE kworb_streams")
-    query("DROP TABLE tracks_analysis")
-    query("DROP TABLE albums_analysis")
-    query("DROP TABLE artists_analysis")
+    #query("DROP TABLE tracks_analysis")
+    #query("DROP TABLE albums_analysis")
+    #query("DROP TABLE artists_analysis")
     run()
     #query("SHOW TABLES")
     get_audit_csv(True)
