@@ -108,6 +108,13 @@ section[data-testid="stSidebar"] { background: #ffffff !important; border-right:
 .divider { border: none; border-top: 1px solid #eef1ee; margin: 14px 0; }
 .mono { font-family: 'DM Mono', monospace; }
 
+div.logo-container img {
+    border-radius: 0 !important;
+    border: none !important;
+    width: 100% !important;
+    height: auto !important;
+}
+
 /* ── Streamlit overrides ── */
 [data-testid="stMetricValue"] { font-size: 26px !important; font-weight: 600 !important; }
 .stSelectbox > div > div { border-radius: 10px !important; }

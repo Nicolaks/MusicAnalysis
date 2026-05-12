@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import streamlit as st
+import base64
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -50,8 +51,19 @@ if "page" not in st.session_state:
     st.session_state.page = "dashboard"
 
 
+def img_to_b64(path):
+    return base64.b64encode(Path(path).read_bytes()).decode()
+
+logo_b64 = img_to_b64("dashboard/data/logo.png") 
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
+    st.markdown(f"""
+    <div style="margin: -4rem -1rem 1rem -1rem;">
+    <img src="data:image/png;base64,{logo_b64}" 
+        style="width:100%;display:block;">
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("""
 <div style="display:flex;align-items:center;gap:10px;padding:4px 0 20px;">
   <div style="width:34px;height:34px;background:#1a5c38;border-radius:10px;

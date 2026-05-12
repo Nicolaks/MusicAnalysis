@@ -12,11 +12,11 @@ def artist_header(artist, image_url):
             st.markdown(
                 """
                 <style>
-                img {
-                    width:120px !important;
-                    height:120px !important;
+                [data-testid="stImageContainer"] img {
+                    width: 120px !important;
+                    height: 120px !important;
                     border-radius: 50% !important;
-                    object-fit:cover !important;
+                    object-fit: cover !important;
                     border: 4px solid #5dbf8a !important;
                 }
                 </style>
