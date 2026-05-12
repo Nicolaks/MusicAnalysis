@@ -7,7 +7,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from data.loader import get_artists_comparison
 from data.transforms import safe_float, normalize_radar
-from components.charts import artists_compare_bar, radar_chart, _LAYOUT
+from components.charts import artists_compare_bar, _LAYOUT
 from components.artist_header import artist_header
 from data.loader import get_artist, get_albums, get_tracks, get_artist_url
 from components.filters import artist_selector
