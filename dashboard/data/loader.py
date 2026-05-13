@@ -321,7 +321,51 @@ def get_corpus_stats(db_path: Path = DB_PATH) -> dict:
         r["total_words"]   = con.execute(
             "SELECT COALESCE(SUM(word_count),0) FROM tracks_analysis"
         ).fetchone()[0]
+
+        # Stats min/max/avg pour identity_card_chart
+        metrics = [
+            ("avg_word_count",      "wc"),
+            ("avg_ttr",             "ttr"),
+            ("avg_rhyme_density",   "rhyme"),
+            ("avg_hapax_ratio",     "hapax"),
+            ("avg_pronoun_i_ratio", "i"),
+            ("avg_repetition_ratio","rep"),
+            ("avg_word_length",     "wl"),
+        ]
+        for col, prefix in metrics:
+            row = con.execute(f"""
+                SELECT MIN({col}), MAX({col}), AVG({col})
+                FROM artists_analysis
+                WHERE {col} IS NOT NULL
+            """).fetchone()
+            r[f"{prefix}_min"] = row[0] or 0
+            r[f"{prefix}_max"] = row[1] or 1
+            r[f"{prefix}_avg"] = row[2] or 0.5
+            
+        # Moyenne des champs lexicaux
+        rows_lex = con.execute("""
+            SELECT avg_lexical_field_scores
+            FROM artists_analysis
+            WHERE avg_lexical_field_scores IS NOT NULL
+        """).fetchall()
+
+        from collections import defaultdict
+        import json as _json
+        lex_totals = defaultdict(float)
+        lex_count = 0
+        for (val,) in rows_lex:
+            try:
+                parsed = _json.loads(val) if isinstance(val, str) else val
+                if parsed:
+                    for k, v in parsed.items():
+                        lex_totals[k] += float(v)
+                    lex_count += 1
+            except Exception:
+                pass
+        r["avg_lexical_fields"] = {k: v / lex_count for k, v in lex_totals.items()} if lex_count else {}
+
         con.close()
+
         return r
-    except Exception:
+    except Exception as e:
         return {"total_artists": 0, "total_albums": 0, "total_tracks": 0, "total_words": 0}

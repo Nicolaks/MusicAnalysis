@@ -9,7 +9,7 @@ import sys, os
 from data.transforms import safe_float
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from config import COLORS, EMOTION_LABELS, EMOTION_DISPLAY
+from config import COLORS, EMOTION_LABELS, EMOTION_DISPLAY, LEXICAL_FIELD_DISPLAY
 
 _LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
@@ -235,7 +235,7 @@ def emotion_heatmap(df: pd.DataFrame) -> go.Figure:
 
 # ── Lexical fields bars ──────────────────────────────────────────────────────
 
-def lexical_bars(values: dict[str, float]) -> go.Figure:
+def lexical_bars(values: dict[str, float], corpus_avg: dict[str, float] = {}) -> go.Figure:
     labels = list(values.keys())
     vals   = list(values.values())
     total  = sum(vals) if sum(vals) > 0 else 1
@@ -245,16 +245,27 @@ def lexical_bars(values: dict[str, float]) -> go.Figure:
     fig = go.Figure(go.Bar(
         x=vals, y=labels, orientation="h",
         marker_color=colors,
-        text=[f"{p:.1f}%" for p in pcts],
-        textposition="outside",
-        textfont=dict(size=12),
+        textposition="none",
+        showlegend=False,
     ))
+
+    for i, pct in enumerate(pcts):
+        fig.add_annotation(
+            x=max(vals) * 1.18, y=i,
+            text=f"{pct:.1f}%",
+            showarrow=False,
+            font=dict(size=12, color="#555", family="DM Sans"),
+            xanchor="right",
+            yanchor="middle",
+        )
+
     fig.update_layout(
         **_LAYOUT,
         height=max(300, 32 * len(labels) + 60),
-        xaxis=dict(range=[0, max(vals) * 1.35 if vals else 1], showgrid=False, visible=False),
+        xaxis=dict(range=[0, max(vals) * 1.25 if vals else 1], showgrid=False, visible=False),
         yaxis=dict(tickfont=dict(size=13), autorange="reversed"),
         bargap=0.2,
+        showlegend=False,
     )
     return fig
 
@@ -310,48 +321,66 @@ def identity_card_chart(artist: pd.Series, corpus: pd.Series) -> go.Figure:
         hoverinfo="skip",
         width=0.5,
     ))
-
     # Barre artiste
     fig.add_trace(go.Bar(
         x=norms,
         y=labels,
         orientation="h",
         marker=dict(color=colors, line=dict(width=0)),
-        text=texts,
-        textposition="outside",
-        textfont=dict(size=11, color="#555", family="DM Sans"),
         showlegend=False,
         hovertemplate="%{y} : %{text}<extra></extra>",
+        text=texts,
+        textposition="none",
         width=0.5,
     ))
 
+    # Texte toujours après x=1.05
+    for i, r in enumerate(rows):
+        fig.add_annotation(
+            x=1.05, y=i,
+            text=r["fmt"],
+            showarrow=False,
+            font=dict(size=11, color="#555", family="DM Sans"),
+            xanchor="left",
+            yanchor="middle",
+        )
+
     # Ligne verticale moyenne corpus
-    for r in rows:
+    for i, r in enumerate(rows):
         fig.add_shape(
             type="line",
             x0=r["avg"], x1=r["avg"],
-            y0=labels.index(r["label"]) - 0.35,
-            y1=labels.index(r["label"]) + 0.35,
-            line=dict(color="#888780", width=2, dash="dot"),
+            y0=i - 0.3,
+            y1=i + 0.3,
+            line=dict(color="#949494", width=1),
+            layer="above",
         )
 
-    # Annotation légende manuelle
-    fig.add_annotation(
-        x=0.98, y=-0.08,
-        xref="paper", yref="paper",
-        text="<b>——</b> Artiste   <b style='color:#888'>····</b> Moyenne corpus",
-        showarrow=False,
-        font=dict(size=10, color="#888", family="DM Sans"),
-        align="right",
-    )
+    # Légende
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None],
+        mode="lines",
+        line=dict(color="#949494", width=2),
+        name="Moyenne corpus",
+        showlegend=True,
+    ))
 
     fig.update_layout(
         **_LAYOUT,
         barmode="overlay",
         height=max(300, 52 * len(rows) + 80),
         bargap=0.3,
-        xaxis=dict(visible=False, range=[0, 1.45]),
+        xaxis=dict(visible=False, range=[0, 1.5]),
         yaxis=dict(tickfont=dict(size=12), autorange="reversed"),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.15,
+            xanchor="left",
+            x=0,
+            font=dict(size=10, family="DM Sans", color="#555"),
+        ),
+        showlegend=True,
     )
     return fig
 
@@ -490,15 +519,19 @@ def artists_compare_bar(df: pd.DataFrame, metric: str, label: str) -> go.Figure:
         return go.Figure()
     colors = [COLORS["primary"] if i == len(sub) - 1 else COLORS["primary_light"]
               for i in range(len(sub))]
+    max_val = sub[metric].max()
+    texts_position = ["inside" if v > max_val * 0.7 else "outside" for v in sub[metric]]
+    texts_color = ["white" if v > max_val * 0.7 else "#555" for v in sub[metric]]
+
     fig = go.Figure(go.Bar(
         x=sub[metric], y=sub["artist_name"], orientation="h",
         marker_color=colors,
         text=sub[metric].round(3),
-        textposition="outside",
-        textfont=dict(size=10),
+        textposition=texts_position,
+        textfont=dict(size=10, color=texts_color),
     ))
     fig.update_layout(
-        **_LAYOUT, height=max(220, 40 * len(sub) + 80),
+        **_LAYOUT, height=max(220, 40 * len(sub) + 90),
         xaxis=dict(showgrid=False, visible=False, title=label),
         yaxis=dict(tickfont=dict(size=11)),
     )

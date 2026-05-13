@@ -92,7 +92,7 @@ def render():
         except Exception:
             lex = {}
         if lex and any(v > 0 for v in lex.values()):
-            st.plotly_chart(lexical_bars(lex), use_container_width=True)
+            st.plotly_chart(lexical_bars(lex, corpus_avg=corpus.get("avg_lexical_fields", {})), use_container_width=True)
         else:
             st.info("Données lexicales absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -190,9 +190,9 @@ def render():
         st.markdown("""
                     ### Carte émotionnelle de la discographie
 
-                    La carte émotionnelle représente l’intensité des émotions détectées dans les paroles de chaque album.
-                    Les émotions (joie, tristesse, colère, peur, surprise, dégoût) sont affichées sur l’axe vertical et les albums sur l’axe horizontal. 
-                    Plus la couleur ou la taille de la bulle est importante, plus l’émotion est présente dans l’album concerné. 
+                    La carte émotionnelle représente l’intensité des émotions détectées dans les paroles de chaque album. 
+                    Les émotions (joie, tristesse, colère, peur, surprise, dégoût) sont affichées sur l’axe vertical et les albums sur l’axe horizontal.  
+                    Plus la taille de la bulle est importante, plus l’émotion est présente dans l’album concerné.  
                     Cette visualisation permet d’identifier rapidement les émotions dominantes, les variations d’ambiance et l’évolution émotionnelle de l’artiste au fil de sa carrière.
         """)
         st.markdown('</div>', unsafe_allow_html=True)

@@ -105,7 +105,7 @@ page_key = st.session_state.page
 if page_key == "dashboard":
     # ── Home dashboard ────────────────────────────────────────────────────────
     st.title("Dashboard")
-    st.caption("Analyse NLP du corpus rap français")
+    st.caption("Analyse NLP du corpus rap/ hip-hop francophone")
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
     
     artists = get_artists()
@@ -161,9 +161,34 @@ if page_key == "dashboard":
                 artists_compare_bar(top_ttr, "career_ttr", "TTR"),
                 width="stretch"
             )
+            st.markdown("A corriger il n'est pas représentatif", unsafe_allow_html=True)
         else:
             st.info("Données TTR absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
+        
+    exp_col1, exp_col2 = st.columns([0.5, 0.5])  # même ratio que col4/5/6
+
+    with exp_col1:
+        with st.expander("Vocabulaire carrière"):
+            st.markdown("""
+                **Vocabulaire carrière**  
+                Nombre de mots utilisés sur l'ensemble de la discographie. 
+                Cette métrique est sensible à la taille du catalogue : 
+                - un artiste avec plus d'albums aura mécaniquement un score plus élevé. 
+            """)
+    
+    with exp_col2:
+        with st.expander("Comprendre le TTR"):
+            st.markdown("""
+            **TTR = Type-Token Ratio** 
+            C'est le rapport entre le nombre de mots uniques (types) et le nombre total de mots (tokens) dans un texte. 
+            
+            Par exemple si un artiste utilise 1000 mots au total dont 250 mots différents → TTR = 0.25. 
+            Plus le TTR est élevé, plus le vocabulaire est varié et riche. Un TTR faible indique beaucoup de répétitions. 
+            """)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
     
