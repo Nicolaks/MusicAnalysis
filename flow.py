@@ -52,7 +52,11 @@ ARTISTS = [
     # "SOFIANE",
     # "TIAKOLA",
     # "GAZO",
-    
+    # "La Fouine",
+    # "Soprano",
+    # "Naza",
+    # "Keblack",
+    # "Kaaris",
 ]
 
 # ─────────────────────────────────────────────
