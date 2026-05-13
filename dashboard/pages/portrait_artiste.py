@@ -248,28 +248,28 @@ def render():
     
     cols_stylo_expl = [
         "<b>Ratio noms</b> : structure plus descriptive et statique du texte (univers, objets, scènes). <br>"
-        "→ <i>Élevé > 0.28 : univers très imagé / descriptif</i> <br> → <i>faible < 0.20 : texte plus narratif ou actionnel</i>",
+        " <ul><li><i> < 0.12 : très narratif/verbal</i></li> <li> <i> 0.12 → 0.20 : équilibré</i> </li> <li><i> 0.20 → 0.28 : descriptif</i></li> <li><i> > 0.28 : très imagé</i></li></ul>",
 
         "<b>Ratio verbes</b> : intensité narrative et dynamique du discours. <br>"
-        "→ <i>Élevé > 0.14 : storytelling fort, mouvement</i> <br> → <i>faible < 0.08 : texte contemplatif ou descriptif</i>",
+        " <ul><li><i>< 0.08 : texte statique</i></li><li><i>0.08 → 0.14 : équilibré</i></li><li><i>0.14 → 0.20 : narratif / dynamique</i></li><li><i>> 0.20 : très dynamique</i></li></ul>",
 
         "<b>Ratio adj.</b> : richesse descriptive et précision des images. <br>"
-        "→ <i>Élevé > 0.08 : écriture très visuelle et détaillée</i> <br> → <i>faible < 0.05 : style plus brut / minimaliste</i>",
+        " <ul><li><i>< 0.03 : style brut / direct</i></li><li><i>0.03 → 0.07 : standard</i></li><li><i>0.07 → 0.12 : descriptif</i></li><li><i>> 0.12 : très visuel / littéraire</i></li></ul>",
 
         "<b>Ratio je/j’</b> : présence de l’artiste dans le texte. <br>"
-        "→ <i>Élevé > 0.15 : introspection forte, écriture personnelle</i> <br> → <i>faible < 0.03 : narration externe ou impersonnelle</i>",
+        " <ul><li><i>< 0.03 : narration impersonnelle</i></li><li><i>0.03 → 0.08 : présence modérée</i></li><li><i>0.08 → 0.15 : introspection forte</i></li><li><i>> 0.15 : écriture très personnelle</i></li></ul>",
 
         "<b>Densité rimes</b> : travail de musicalité et de structure sonore. <br>"
-        "→ <i>Élevé > 1.3 : écriture très travaillée / technique</i> <br> → <i>faible < 0.80 : style plus libre ou parlé</i>",
+       " <ul><li><i>< 0.8 : faible</i></li><li><i>0.8 → 1.3 : moyenne</i></li><li><i>1.3 → 1.8 : élevée</i></li><li><i>1.8 → 2.5 : très technique</i></li><li><i>> 2.5 : extrêmement dense</i></li></ul>",
 
         "<b>Syl./ligne</b> : complexité rythmique et densité du flow. <br>"
-        "→ <i>Élevé > 12 : flow dense et technique</i> <br> → <i>faible < 8 : delivery simple et direct</i>",
+        " <ul><li><i>< 8 : flow simple / direct</i></li><li><i>8 → 12 : densité standard</i></li><li><i>12 → 16 : flow dense</i></li><li><i>> 16 : très technique / chargé</i></li><br></ul>",
 
         "<b>Long. mot moy.</b> : sophistication lexicale globale. <br>"
-        "→ <i>Élevé > 5 : vocabulaire riche et soutenu</i> <br> → <i>faible < 4.3 : langage simple et accessible</i>",
+        " <ul><li><i>< 4.3 : langage simple / oral</i></li><li><i>4.3 → 5.0 : standard</i></li><li><i>5.0 → 5.6 : soutenu</i></li><li><i>> 5.6 : très sophistiqué</i></li></ul>",
 
         "<b>Ratio hapax</b> : créativité lexicale et diversité des mots. <br>"
-        "→ <i>Élevé > 0.65 : forte originalité lexicale</i> <br> → <i>faible < 0.45 : répétition de patterns et refrains</i>",
+        " <ul><li><i>< 0.45 : écriture répétitive</i></li><li><i>0.45 → 0.65 : vocabulaire varié</i></li><li><i>0.65 → 0.80 : forte richesse lexicale</i></li><li><i>> 0.80 : diversité lexicale exceptionnelle</i></li></ul>",
     ]
     
     c = st.columns(2, gap="small")
