@@ -276,12 +276,24 @@ def get_artists_comparison(artist_names: list[str], db_path: Path = DB_PATH) -> 
             FROM artists_analysis aa
             {stream_join}
             WHERE aa.artist_name IN ({placeholders})
-            GROUP BY aa.artist_id
+            GROUP BY ALL
         """, artist_names).df()
-        con.close()
         return df
-    except Exception:
+    except Exception as e:
         return pd.DataFrame()
+    
+def get_corpus_year_range(db_path: Path = DB_PATH) -> dict:
+    try:
+        con = _con(db_path)
+        row = con.execute("""
+            SELECT MIN(album_release_year), MAX(album_release_year)
+            FROM tracks_flat
+            WHERE album_release_year IS NOT NULL
+        """).fetchone()
+        con.close()
+        return {"year_min": row[0], "year_max": row[1]}
+    except Exception:
+        return {"year_min": "—", "year_max": "—"}
 
 
 def get_corpus_stats(db_path: Path = DB_PATH) -> dict:
