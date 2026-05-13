@@ -113,6 +113,21 @@ def get_albums(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
         return df
     except Exception:
         return pd.DataFrame()
+    
+def get_streams_artist(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
+    try:
+        con = _con(db_path)
+        has_streams = _table_exists(con, "kworb_streams")
+        print(f"has_kworb={has_streams}")
+        df = con.execute("""
+                        SELECT SUM(streams) as streams FROM kworb_streams WHERE artist_name = ? 
+                         """, [artist_name]).df()
+        print(f"Streams de {artist_name}{df.get("streams")}")
+        con.close()
+        return df
+    except Exception as e:
+        print(f"ERREUR: {e}")
+        return pd.DataFrame()
 
 def get_albums_with_streams(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     try:

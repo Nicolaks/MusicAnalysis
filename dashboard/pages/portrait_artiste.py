@@ -11,7 +11,7 @@ from data.transforms import (parse_top_words, parse_style_signature,
                               safe_float, streams_label)
 from components.charts import (top_words_bar, emotion_heatmap,
                                 sentiment_donut, lexical_bars, emotion_donut_chart, identity_card_chart, audio_radar_chart)
-from data.loader import get_artist, get_albums, get_tracks, get_artist_url, get_albums_with_streams, get_corpus_stats, get_audio_radar
+from data.loader import get_artist, get_albums, get_tracks, get_artist_url, get_albums_with_streams, get_corpus_stats, get_audio_radar, get_streams_artist
 from components.metrics import artist_kpis
 from components.filters import artist_selector
 from config import RADAR_KEYS, RADAR_DISPLAY, LEXICAL_FIELD_DISPLAY, EMOTION_DISPLAY
@@ -32,6 +32,7 @@ def render():
     tracks  = get_tracks(artist_name)
     artist_image_url = get_artist_url(artist_name)
     corpus = get_corpus_stats()
+    stream = get_streams_artist(artist_name)
 
     if artist.empty:
         st.warning(f"Aucune donnée pour {artist_name}.")
@@ -40,7 +41,7 @@ def render():
     artist_header(artist, artist_image_url)
 
     # ── KPIs ──────────────────────────────────────────────────────────────────
-    artist_kpis(artist)
+    artist_kpis(artist, stream)
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
     # ── Ligne 1 : Radar + Sentiment donut ─────────────────────────────────────
