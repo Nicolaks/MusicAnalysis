@@ -44,9 +44,14 @@ ARTISTS = [
     # "PNL",
     # "NISKA",
     # "Theodora",
-    "Diams",
-    "GIMS",
-    "JUL",
+    # "Diams",
+    # "GIMS",
+    # "JUL",
+    # "DISIZ",
+    # "LACRIM",
+    # "SOFIANE",
+    # "TIAKOLA",
+    "GAZO",
 ]
 
 # ─────────────────────────────────────────────
@@ -137,15 +142,15 @@ def delete_artist_from_db(db_path: str, artist_name: str):
     """
 
     tables_with_artist = {
-        # "albums_analysis": "artist_name",
-        # "artists_analysis": "artist_name",
-        # "audio_features_local": "artist_name",
-        # "isrc_data": "artist_name",
+        "albums_analysis": "artist_name",
+        "artists_analysis": "artist_name",
+        "audio_features_local": "artist_name",
+        "isrc_data": "artist_name",
         "kworb_streams": "artist_name",
-        # "ranking_data": "artist_name",
-        # "samples_index": "artist_name",
-        # "tracks_analysis": "artist_name",
-        # "tracks_flat": "artist_name",
+        "ranking_data": "artist_name",
+        "samples_index": "artist_name",
+        "tracks_analysis": "artist_name",
+        "tracks_flat": "artist_name",
     }
     conn = duckdb.connect(db_path)
 
@@ -272,7 +277,7 @@ if __name__ == "__main__":
     #delete_artist_from_db(DB_PATH, "GIMS")
     #delete_artist_from_db(DB_PATH, "Jul")
     run()
-
+    #delete_artist_from_db(DB_PATH, "GAZO")
     #query("SHOW TABLES")
     get_audit_csv(True)
     get_db_table_schema()
