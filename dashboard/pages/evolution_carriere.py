@@ -94,7 +94,6 @@ def render():
     col1, col2 = st.columns(2, gap="small")
 
     with col1:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Évolution du sentiment par album</div>',
                     unsafe_allow_html=True)
         has_sent = any(c in albums.columns for c in
@@ -106,7 +105,6 @@ def render():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Richesse lexicale par album</div>',
                     unsafe_allow_html=True)
         st.plotly_chart(vocab_evolution(albums), width="stretch")
@@ -115,7 +113,6 @@ def render():
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     # ── Heatmap émotions ──────────────────────────────────────────────────────
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Carte émotionnelle — album par album</div>',
                 unsafe_allow_html=True)
     emotion_cols = [c for c in EMOTION_LABELS if c in albums.columns]
@@ -137,14 +134,12 @@ def render():
     col3, col4 = st.columns(2, gap="small")
 
     with col3:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Évolution des champs lexicaux</div>',
                     unsafe_allow_html=True)
         st.plotly_chart(_lexical_area(albums), width="stretch")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col4:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Complexité des textes (Flesch-Kincaid)</div>',
                     unsafe_allow_html=True)
         st.plotly_chart(_flesch_line(albums), width="stretch")
@@ -152,7 +147,6 @@ def render():
 
     # ── Tableau récapitulatif ──────────────────────────────────────────────────
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Tableau récapitulatif albums</div>',
                 unsafe_allow_html=True)
     display_cols = {

@@ -49,7 +49,7 @@ def render():
 
     with col1:
         st.markdown('<div class="card-title">Carte d\'identité</div>', unsafe_allow_html=True)
-        st.plotly_chart(identity_card_chart(artist, corpus), use_container_width=True)
+        st.plotly_chart(identity_card_chart(artist, corpus), width='stretch')
         with st.expander("Comprendre les métriques"):
             st.markdown("""
             - **Mots / chanson** :  
@@ -96,7 +96,7 @@ def render():
         except Exception:
             lex = {}
         if lex and any(v > 0 for v in lex.values()):
-            st.plotly_chart(lexical_bars(lex, corpus_avg=corpus.get("avg_lexical_fields", {})), use_container_width=True)
+            st.plotly_chart(lexical_bars(lex, corpus_avg=corpus.get("avg_lexical_fields", {})), width='stretch')
         else:
             st.info("Données lexicales absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -110,7 +110,7 @@ def render():
         st.markdown('<div class="card-title">Top 20 mots</div>', unsafe_allow_html=True)
         words = parse_top_words(artist.get("top30_words"))
         if words:
-            st.plotly_chart(top_words_bar(words[:20]), use_container_width=True, key="top_words_freq")
+            st.plotly_chart(top_words_bar(words[:20]), width='stretch', key="top_words_freq")
         else:
             st.info("Aucun mot disponible.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -121,7 +121,7 @@ def render():
         st.markdown('<div class="card-title">Top mots TF-IDF</div>', unsafe_allow_html=True)
         words = parse_top_words(artist.get("tfidf_top_keywords"))
         if words:
-            st.plotly_chart(top_words_bar(words[:20]), use_container_width=True, key="top_tfidf")
+            st.plotly_chart(top_words_bar(words[:20]), width='stretch', key="top_tfidf")
         else:
             st.info("Aucun mot disponible.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -130,7 +130,7 @@ def render():
         st.markdown('<div class="card-title">Émotions globales</div>', unsafe_allow_html=True)
         emo_scores = artist.get("avg_emotion_scores")
         if emo_scores:
-            st.plotly_chart(emotion_donut_chart(emo_scores), use_container_width=True)
+            st.plotly_chart(emotion_donut_chart(emo_scores), width='stretch')
             # Émotion dominante en texte sous le chart
             dominant_raw = artist.get("dominant_emotions", "")
             if dominant_raw:
@@ -183,7 +183,7 @@ def render():
         if not albums.empty:
             df_heat = albums_emotion_matrix(albums_streams.head(15))
             if not df_heat.empty:
-                st.plotly_chart(emotion_heatmap(df_heat), use_container_width=True)
+                st.plotly_chart(emotion_heatmap(df_heat), width='stretch')
             else:
                 st.info("Colonnes émotions absentes.")
         else:
@@ -209,7 +209,7 @@ def render():
     if not artist_audio.empty:
         st.plotly_chart(
             audio_radar_chart(artist_audio, compare_df=corpus_audio),
-            use_container_width=True,
+            width='stretch',
             key="audio_radar"
         )
     else:

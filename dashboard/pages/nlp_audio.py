@@ -68,7 +68,7 @@ def render():
     if len(all_cols) >= 4:
         st.plotly_chart(
             correlation_heatmap(df, all_cols, all_labels),
-            use_container_width=True
+            width='stretch'
         )
     else:
         st.info("Pas assez de colonnes pour la corrélation.")
@@ -87,7 +87,7 @@ def render():
             st.plotly_chart(
                 scatter_ttr_streams(df, "rhyme_density", "tempo",
                                      "Densité rimes", "Tempo (BPM)"),
-                use_container_width=True
+                width='stretch'
             )
         else:
             st.info("Colonnes rhyme_density / tempo absentes.")
@@ -101,7 +101,7 @@ def render():
             st.plotly_chart(
                 scatter_ttr_streams(df, "sentiment_negative", "roughness",
                                      "Sentiment négatif", "Rugosité"),
-                use_container_width=True
+                width='stretch'
             )
         else:
             st.info("Colonnes sentiment_negative / roughness absentes.")
@@ -146,7 +146,7 @@ def render():
             xaxis=dict(title=all_labels.get(x_col, x_col), gridcolor="#f0f0f0"),
             yaxis=dict(title=all_labels.get(y_col, y_col), gridcolor="#f0f0f0"),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     else:
         st.info("Pas assez de colonnes numériques.")
     st.markdown('</div>', unsafe_allow_html=True)

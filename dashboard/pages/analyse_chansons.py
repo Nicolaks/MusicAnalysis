@@ -63,7 +63,6 @@ def render():
     col1, col2 = st.columns([1, 1.5], gap="small")
 
     with col1:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Top titres par streams</div>',
                     unsafe_allow_html=True)
         if stream_col:
@@ -76,13 +75,12 @@ def render():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         if stream_col and "ttr" in tracks.columns:
             st.markdown('<div class="card-title">Richesse lexicale vs Streams</div>',
                         unsafe_allow_html=True)
             st.plotly_chart(
                 scatter_ttr_streams(tracks, "ttr", stream_col, "TTR", "Streams"),
-                use_container_width=True
+                width='stretch'
             )
         elif "ttr" in tracks.columns and "rhyme_density" in tracks.columns:
             st.markdown('<div class="card-title">TTR vs densité de rimes</div>',
@@ -90,7 +88,7 @@ def render():
             st.plotly_chart(
                 scatter_ttr_streams(tracks, "ttr", "rhyme_density",
                                      "TTR", "Densité rimes"),
-                use_container_width=True
+                width='stretch'
             )
         else:
             st.info("Données insuffisantes pour le scatter.")
@@ -99,7 +97,6 @@ def render():
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     # ── Analyse d'une chanson ─────────────────────────────────────────────────
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Analyse détaillée d\'une chanson</div>',
                 unsafe_allow_html=True)
 
@@ -123,7 +120,7 @@ def render():
             neg = safe_float(row.get("sentiment_negative", 0))
             if pos + neu + neg > 0:
                 st.caption("Tonalité")
-                st.plotly_chart(sentiment_donut(pos, neu, neg), use_container_width=True)
+                st.plotly_chart(sentiment_donut(pos, neu, neg), width='stretch')
             else:
                 st.info("Sentiment absent.")
 
@@ -151,7 +148,7 @@ def render():
                     xaxis=dict(showgrid=False, visible=False),
                     yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.info("Émotions absentes.")
 
@@ -161,7 +158,7 @@ def render():
                          for e in ["joie","tristesse","colere"])
             if has_arc:
                 st.caption("Arc émotionnel")
-                st.plotly_chart(emotion_arc_line(row), use_container_width=True)
+                st.plotly_chart(emotion_arc_line(row), width='stretch')
             else:
                 # Temps verbaux
                 tv = {
@@ -186,7 +183,7 @@ def render():
                         xaxis=dict(tickfont=dict(size=11)),
                         yaxis=dict(showgrid=False, visible=False),
                     )
-                    st.plotly_chart(fig2, use_container_width=True)
+                    st.plotly_chart(fig2, width='stretch')
                 else:
                     st.info("Arc / temps verbaux absents.")
 
@@ -205,7 +202,6 @@ def render():
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
     emo_dom_col = "emotion_dominant"
     if emo_dom_col in tracks.columns and tracks[emo_dom_col].notna().any():
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Distribution des émotions dominantes sur le catalogue</div>',
                     unsafe_allow_html=True)
         counts = tracks[emo_dom_col].value_counts()
@@ -222,5 +218,5 @@ def render():
             legend=dict(orientation="h", y=-0.2),
             margin=dict(l=8,r=8,t=8,b=8),
         )
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width='stretch')
         st.markdown('</div>', unsafe_allow_html=True)

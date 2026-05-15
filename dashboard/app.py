@@ -73,7 +73,7 @@ with st.sidebar:
     for key, (label, _) in PAGES.items():
         active = "active" if st.session_state.page == key else ""
         if st.sidebar.button(label, key=f"nav_{key}",
-                              use_container_width=True,
+                              width='stretch',
                               type="secondary"):
             st.session_state.page = key
             st.rerun()
@@ -235,7 +235,7 @@ if page_key == "dashboard":
                 mode="text",
                 text=list(words),
                 textfont=dict(
-                size=[9 + (f / max_freq) * 27 for f in freqs],
+                size=[9 + (f / max_freq) * 17 for f in freqs],
                 color=[
                     f"rgb({int(26 + (1 - f/max_freq) * 178)}, "
                     f"{int(92 + (1 - f/max_freq) * 149)}, "
@@ -256,6 +256,9 @@ if page_key == "dashboard":
                 yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-4, 4]),
             )
             st.plotly_chart(fig_wc, width="stretch")
+            st.markdown("""
+                        Ce **nuage de mots** met en évidence les termes les plus fréquents dans le corpus des chansons des artistes, offrant une vue d’ensemble de leurs univers.
+                        """)
         
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -306,6 +309,9 @@ if page_key == "dashboard":
             else:
                 st.info("Colonnes émotions absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("""
+                        Le graphique présente la distribution des différentes émotions à travers le corpus analysé.
+                        """)
         
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
@@ -363,6 +369,9 @@ if page_key == "dashboard":
         else:
             st.info("Colonnes streams ou TTR absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("""
+                    Dans ce graphique, on compare le nombre total de **streams** d’un artiste avec le **TTR moyen de ses chansons** afin de pouvoir effectuer des comparaisons entre artistes.
+                    """)
 
 else:
     _, module = PAGES[page_key]

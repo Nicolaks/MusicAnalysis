@@ -92,7 +92,6 @@ def render():
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
     # ── KPI grid artistes ──────────────────────────────────────────────────────
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Vue d\'ensemble</div>', unsafe_allow_html=True)
     header_cols = ["artist_name", "track_count", "album_count",
                    "career_vocabulary_size", "career_ttr",
@@ -109,7 +108,7 @@ def render():
         "pct_negative":           "% Négatif",
     }
     shown = df[avail_cols].rename(columns=rename_map)
-    st.dataframe(shown, use_container_width=True, hide_index=True,
+    st.dataframe(shown, width='stretch', hide_index=True,
                  column_config={
                      "TTR":          st.column_config.NumberColumn(format="%.3f"),
                      "Densité rimes":st.column_config.NumberColumn(format="%.3f"),
@@ -124,19 +123,17 @@ def render():
     col1, col2 = st.columns([1.2, 1], gap="small")
 
     with col1:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Signature stylistique comparée</div>',
                     unsafe_allow_html=True)
-        st.plotly_chart(_multi_radar(df), use_container_width=True)
+        st.plotly_chart(_multi_radar(df), width='stretch')
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Émotions dominantes comparées</div>',
                     unsafe_allow_html=True)
         fig_emo = _emotion_grouped_bar(df)
         if fig_emo.data:
-            st.plotly_chart(fig_emo, use_container_width=True)
+            st.plotly_chart(fig_emo, width='stretch')
         else:
             st.info("Colonnes émotions absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -144,7 +141,6 @@ def render():
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     # ── Bar chart par métrique ─────────────────────────────────────────────────
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Classement par métrique NLP</div>',
                 unsafe_allow_html=True)
 
@@ -153,7 +149,7 @@ def render():
         metric = metric_selector(avail_metrics, NLP_FEATURES_DISPLAY,
                                   label="Métrique", key="comp_metric")
         label  = NLP_FEATURES_DISPLAY.get(metric, metric)
-        st.plotly_chart(artists_compare_bar(df, metric, label), use_container_width=True)
+        st.plotly_chart(artists_compare_bar(df, metric, label), width='stretch')
     else:
         st.info("Aucune métrique NLP disponible.")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -161,7 +157,6 @@ def render():
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     # ── Scatter positionnement ─────────────────────────────────────────────────
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Positionnement artistique</div>',
                 unsafe_allow_html=True)
 
@@ -195,7 +190,7 @@ def render():
             xaxis=dict(title=NLP_FEATURES_DISPLAY.get(x_metric, x_metric), gridcolor="#f0f0f0"),
             yaxis=dict(title=NLP_FEATURES_DISPLAY.get(y_metric, y_metric), gridcolor="#f0f0f0"),
         )
-        st.plotly_chart(fig_sc, use_container_width=True)
+        st.plotly_chart(fig_sc, width='stretch')
     else:
         st.info("Métriques insuffisantes pour le scatter.")
     st.markdown('</div>', unsafe_allow_html=True)
