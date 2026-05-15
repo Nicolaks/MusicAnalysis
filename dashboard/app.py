@@ -158,14 +158,13 @@ if page_key == "dashboard":
 
     with col3:
         st.markdown('<div class="card-title">Top artistes : TTR</div>', unsafe_allow_html=True)
-        if not df_all.empty and "career_ttr" in df_all.columns:
+        if not df_all.empty and "avg_ttr" in df_all.columns:
             from components.charts import artists_compare_bar
             top_ttr = df_all.nlargest(10, "avg_ttr")
             st.plotly_chart(
                 artists_compare_bar(top_ttr, "avg_ttr", "TTR moyen"),
                 width="stretch"
             )
-            st.markdown("A corriger il n'est pas représentatif", unsafe_allow_html=True)
         else:
             st.info("Données TTR absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -185,6 +184,8 @@ if page_key == "dashboard":
         with st.expander("Comprendre le TTR"):
             st.markdown("""
             **TTR = Type-Token Ratio** 
+            
+            *Moyenne des TTR calculée chanson par chanson, indépendamment de la taille du catalogue.*  
             C'est le rapport entre le nombre de mots uniques (types) et le nombre total de mots (tokens) dans un texte. 
             
             Par exemple si un artiste utilise 1000 mots au total dont 250 mots différents → TTR = 0.25. 
@@ -312,11 +313,11 @@ if page_key == "dashboard":
 
     with col_scatter:
         st.markdown('<div class="card-title">Corrélation streams × richesse vocabulaire (TTR)</div>', unsafe_allow_html=True)
-        if not df_all.empty and "career_ttr" in df_all.columns and "total_streams" in df_all.columns:
+        if not df_all.empty and "avg_ttr" in df_all.columns and "total_streams" in df_all.columns:
             import plotly.graph_objects as go
             import numpy as np
 
-            df_sc = df_all[["artist_name", "career_ttr", "total_streams"]].dropna()
+            df_sc = df_all[["artist_name", "avg_ttr", "total_streams"]].dropna()
             df_sc = df_sc[df_sc["total_streams"] > 0]
             
             
@@ -324,7 +325,7 @@ if page_key == "dashboard":
 
             if not df_sc.empty:
                 # Ligne de tendance OLS
-                x = df_sc["career_ttr"].values
+                x = df_sc["avg_ttr"].values
                 y = df_sc["total_streams"].values
                 m, b = np.polyfit(x, y, 1)
                 x_line = np.linspace(x.min(), x.max(), 100)
@@ -332,7 +333,7 @@ if page_key == "dashboard":
 
                 fig_sc = go.Figure()
                 fig_sc.add_trace(go.Scatter(
-                    x=df_sc["career_ttr"],
+                    x=df_sc["avg_ttr"],
                     y=df_sc["total_streams"],
                     mode="markers+text",
                     text=df_sc["artist_name"],
@@ -340,7 +341,7 @@ if page_key == "dashboard":
                     textfont=dict(family="DM Sans", size=11, color="#1a5c38"),
                     marker=dict(
                         size=[max(8, min(40, s / df_sc["total_streams"].max() * 50)) for s in df_sc["total_streams"]],
-                        color=df_sc["career_ttr"],
+                        color=df_sc["avg_ttr"],
                         colorscale=[[0, "#1a5c38"], [1, "#5dbf8a"]],
                         showscale=False,
                     ),

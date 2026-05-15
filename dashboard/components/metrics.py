@@ -28,7 +28,7 @@ def artist_kpis(artist: pd.Series, stream: pd.DataFrame):
     ttr    = safe_float(artist.get("career_ttr", 0))
     albums = int(safe_float(artist.get("album_count", 0)))
     tracks = int(safe_float(artist.get("track_count", 0)))
-    streams = streams_label(int(stream["streams"].iloc[0]))
+    streams = streams_label(int(stream["streams"].iloc[0]) if not pd.isna(stream["streams"].iloc[0]) else 0)
     pct_pos = safe_float(artist.get("pct_positive", 0)) * 100
     pct_neg = safe_float(artist.get("pct_negative", 0)) * 100
     rhy    = safe_float(artist.get("avg_rhyme_density", 0))
@@ -36,8 +36,8 @@ def artist_kpis(artist: pd.Series, stream: pd.DataFrame):
 
     kpi_row([
         {"label": "Vocabulaire carrière", "value": f"{vocab:,}",
-         "sub": f"TTR : {ttr:.3f}", "featured": True},
+         "sub": f"TTR global : {ttr:.3f}", "featured": True},
         {"label": "Albums analysés",  "value": str(albums), "sub": "discographie"},
         {"label": "Titres analysés",  "value": str(tracks), "sub": "paroles"},
-        {"label": "Nombre de streams", "value": str(streams), "sub": "streams"},
+        {"label": "Nombre de streams Spotify", "value": str(streams), "sub": "streams"},
     ])

@@ -301,7 +301,10 @@ def load_to_duckdb(artist: dict, db_path: Path) -> None:
     inserted = skipped = 0
     
     NON_CANONICAL_PATTERNS = re.compile(
-        r'\((remix|live|freestyle|version|demo|edit|acoustic|instrumental|reprise)[^)]*\)',
+        r'[\(\[（]\s*'
+        r'(remix|live|freestyle|version|demo|edit|solo|acoustic|instrumental|reprise)\b'
+        r'[^)\]）]*'
+        r'[\)\]）]',
         re.IGNORECASE
     )
     def _is_canonical(track_name: str) -> bool:
