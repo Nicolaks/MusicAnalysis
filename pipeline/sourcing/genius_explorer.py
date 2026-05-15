@@ -3,6 +3,7 @@ import logging
 import duckdb
 import lyricsgenius
 import time
+import re
 
 from pathlib import Path
 from typing import Optional
@@ -40,6 +41,7 @@ CREATE TABLE IF NOT EXISTS tracks_flat (
     track_views        BIGINT,
     featuring          VARCHAR,
     lyrics             VARCHAR,
+    is_canonical       BOOLEAN DEFAULT TRUE,
     PRIMARY KEY (track_id, artist_id)
 );
 """
@@ -297,6 +299,13 @@ def load_to_duckdb(artist: dict, db_path: Path) -> None:
     con.execute(DDL)
 
     inserted = skipped = 0
+    
+    NON_CANONICAL_PATTERNS = re.compile(
+        r'\((remix|live|freestyle|version|demo|edit|acoustic|instrumental|reprise)[^)]*\)',
+        re.IGNORECASE
+    )
+    def _is_canonical(track_name: str) -> bool:
+        return not bool(NON_CANONICAL_PATTERNS.search(track_name))
 
     def insert(track: dict, album: Optional[dict]) -> None:
         nonlocal inserted, skipped
@@ -316,6 +325,7 @@ def load_to_duckdb(artist: dict, db_path: Path) -> None:
             track["url"], track["views"],
             ", ".join(track["featuring"]) if track["featuring"] else None,
             track["lyrics"],
+            _is_canonical(track["name"]),
         ]
         try:
             con.execute(

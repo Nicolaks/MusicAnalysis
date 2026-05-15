@@ -57,6 +57,42 @@ ARTISTS = [
     # "Naza",
     # "Keblack",
     # "Kaaris",
+    # "Alonzo",
+    # "SNIPER",
+    # "JOEY STARR",
+    # "NTM",
+    # "MC SOLAAR",
+    # "SINIK",
+    # "MOKOBE",
+    # "IAM",
+    # "KENNY ARKANA",
+    # "ZAHO",
+    # "MERYL",
+    # "MAUREEN",
+    # "SHAY",
+    # "BIGFLO & OLI",
+    # "BLACK M",
+    # "RK",
+    # "GRADUR",
+    # "RIMK",
+    # "HAMZA",
+    # "VALD",
+    # "SOSO MANESS",
+    ############
+    "KALASH",
+    # "MEDINE",
+    # "YOUSSOUPHA",
+    # "MISTER YOU",
+    # "SETH GUEKO",
+    # "AYA NAKAMURA",
+    # "KERY JAMES",
+    # "NAPS",
+    # "MAES",
+    # "NEKFEU",
+    # "LETO",
+    # "JOK'HAIR",
+    # "ROHFF",
+    
 ]
 
 # ─────────────────────────────────────────────
@@ -281,7 +317,67 @@ if __name__ == "__main__":
     #delete_artist_from_db(DB_PATH, "Diam’s")
     #delete_artist_from_db(DB_PATH, "GIMS")
     #delete_artist_from_db(DB_PATH, "Jul")
-    run()
+    # query("""
+    #       SELECT track_name, artist_name, COUNT(*) as n
+    #         FROM tracks_flat
+    #         WHERE LOWER(track_name) LIKE '%remix%'
+    #         OR LOWER(track_name) LIKE '%version%'
+    #         OR LOWER(track_name) LIKE '%live%'
+    #         OR LOWER(track_name) LIKE '%acoustic%'
+    #         OR LOWER(track_name) LIKE '%edit%'
+    #         OR LOWER(track_name) LIKE '%Solo%'
+    #         GROUP BY track_name, artist_name
+    #         ORDER BY n DESC
+    #         LIMIT 20
+    #       """)
+    
+    # query("""
+    #       DELETE FROM kworb_streams
+    #         WHERE track_id IN (
+    #             SELECT track_id FROM tracks_flat
+    #             WHERE is_canonical = FALSE
+    #         )
+    #       """)
+    # query("""
+    #       DELETE FROM ranking_data
+    #         WHERE track_id IN (
+    #             SELECT track_id FROM tracks_flat
+    #             WHERE is_canonical = FALSE
+    #         )
+    #       """)
+    # query("""
+    #       DELETE FROM isrc_data
+    #         WHERE track_id IN (
+    #             SELECT track_id FROM tracks_flat
+    #             WHERE is_canonical = FALSE
+    #         )
+    #       """)
+    # query("""
+    #       DELETE FROM audio_features_local
+    #         WHERE track_id IN (
+    #             SELECT track_id FROM tracks_flat
+    #             WHERE is_canonical = FALSE
+    #         )
+    #       """)
+#     query("""
+          
+# ALTER TABLE tracks_flat ADD COLUMN IF NOT EXISTS is_canonical BOOLEAN DEFAULT TRUE;
+
+# UPDATE tracks_flat SET is_canonical = FALSE
+# WHERE
+# (
+#     LOWER(track_name) LIKE '%(remix)%'
+#     OR LOWER(track_name) LIKE '%(live)%'
+#     OR LOWER(track_name) LIKE '%(freestyle)%'
+#     OR LOWER(track_name) LIKE '%(version)%'
+#     OR LOWER(track_name) LIKE '%(demo)%'
+#     OR LOWER(track_name) LIKE '%(edit)%'
+#     OR LOWER(track_name) LIKE '%(acoustic)%'
+#     OR LOWER(track_name) LIKE '%(Solo)%'
+# )
+          
+#           """)
+    #run()
     #delete_artist_from_db(DB_PATH, "GAZO")
     #query("SHOW TABLES")
     get_audit_csv(True)

@@ -282,7 +282,9 @@ def get_artists_comparison(artist_names: list[str], db_path: Path = DB_PATH) -> 
         if has_kworb:
             stream_join = """
                 LEFT JOIN tracks_analysis ta2 ON ta2.artist_id = aa.artist_id
-                LEFT JOIN kworb_streams ks    ON ks.track_id   = ta2.track_id
+                LEFT JOIN kworb_streams ks ON ks.track_id = ta2.track_id
+                LEFT JOIN tracks_flat tf ON tf.track_id = ta2.track_id
+                    AND (tf.is_canonical IS NULL OR tf.is_canonical = TRUE)
             """
             stream_col = "SUM(DISTINCT ks.streams) AS total_streams"
 
@@ -304,6 +306,7 @@ def get_corpus_year_range(db_path: Path = DB_PATH) -> dict:
             SELECT MIN(album_release_year), MAX(album_release_year)
             FROM tracks_flat
             WHERE album_release_year IS NOT NULL
+            AND (is_canonical IS NULL OR is_canonical = TRUE)
         """).fetchone()
         con.close()
         return {"year_min": row[0], "year_max": row[1]}

@@ -68,7 +68,7 @@ def load_tracks_to_analyze(
             ) IN ({placeholders})
         """
 
-    params = normalized_artists
+    params = normalized_artists if artists else []
     exists_filter = "" if rerun else """
         AND NOT EXISTS (
             SELECT 1 FROM tracks_analysis ta
@@ -83,6 +83,7 @@ def load_tracks_to_analyze(
         FROM tracks_flat tf
         LEFT JOIN isrc_data id ON id.track_id = tf.track_id
         WHERE tf.lyrics IS NOT NULL
+        AND (tf.is_canonical IS NULL OR tf.is_canonical = TRUE)
         {artist_filter}
         {exists_filter}
         ORDER BY tf.artist_id, tf.album_id, tf.track_id
