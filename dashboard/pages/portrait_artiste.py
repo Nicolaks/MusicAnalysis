@@ -14,7 +14,7 @@ from components.charts import (top_words_bar, emotion_heatmap,
 from data.loader import get_artist, get_albums, get_tracks, get_artist_url, get_albums_with_streams, get_corpus_stats, get_audio_radar, get_streams_artist
 from components.metrics import artist_kpis
 from components.filters import artist_selector
-from config import RADAR_KEYS, RADAR_DISPLAY, LEXICAL_FIELD_DISPLAY, EMOTION_DISPLAY, ARTIST_DISPLAY_NAMES
+from config import RADAR_KEYS, RADAR_DISPLAY, LEXICAL_FIELD_DISPLAY, EMOTION_DISPLAY
 from components.artist_header import artist_header
 
 
@@ -38,8 +38,7 @@ def render():
         st.warning(f"Aucune donnée pour {artist_name}.")
         return
     
-    display_name = ARTIST_DISPLAY_NAMES.get(artist_name, artist_name)
-    artist_header(artist, artist_image_url, display_name)
+    artist_header(artist, artist_image_url)
 
     # ── KPIs ──────────────────────────────────────────────────────────────────
     artist_kpis(artist, stream)
@@ -130,10 +129,6 @@ def render():
     with col6:
         st.markdown('<div class="card-title">Émotions globales</div>', unsafe_allow_html=True)
         emo_scores = artist.get("avg_emotion_scores")
-        st.write({
-            "avg_emotion_scores": artist.get("avg_emotion_scores"),
-            "dominant_emotions": artist.get("dominant_emotions")
-        })
         if emo_scores:
             st.plotly_chart(emotion_donut_chart(emo_scores), use_container_width=True)
             # Émotion dominante en texte sous le chart
