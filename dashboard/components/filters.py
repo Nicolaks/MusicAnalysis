@@ -3,16 +3,19 @@ import streamlit as st
 import pandas as pd
 import sys, os
 
+from config import ARTIST_DISPLAY_NAMES, ARTIST_DISPLAY_NAMES_INV
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from data.loader import get_artists
 
 
-def artist_selector(key: str = "artist", label: str = "Artiste") -> str | None:
-    artists = get_artists()
-    if not artists:
-        st.sidebar.warning("Aucun artiste en base.")
-        return None
-    return st.sidebar.selectbox(label, artists, key=key)
+def artist_selector(key="artist"):
+    artists_raw = get_artists()
+    artists_display = [ARTIST_DISPLAY_NAMES.get(a, a) for a in artists_raw]
+    
+    selected_display = st.sidebar.selectbox("Artiste", artists_display, key=key)
+    # Retourne le nom original pour les requêtes BDD
+    return ARTIST_DISPLAY_NAMES_INV.get(selected_display, selected_display)
 
 
 def multi_artist_selector(key: str = "artists", label: str = "Artistes", default_n: int = 3) -> list[str]:

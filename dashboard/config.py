@@ -98,3 +98,5 @@ ARTIST_DISPLAY_NAMES = {
     "Ntmojo": "Suprême NTM",
     # autres corrections...
 }
+
+ARTIST_DISPLAY_NAMES_INV = {v: k for k, v in ARTIST_DISPLAY_NAMES.items()}

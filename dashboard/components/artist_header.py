@@ -1,6 +1,6 @@
 import streamlit as st
     
-def artist_header(artist, image_url):
+def artist_header(artist, image_url, display_name):
 
     col1, col2 = st.columns([1, 5])
 
@@ -26,6 +26,6 @@ def artist_header(artist, image_url):
 
     with col2:
         st.markdown(
-            f"<h1 style='margin:10px 0 0 0'>{artist['artist_name']}</h1>",
+            f"<h1 style='margin:10px 0 0 0'>{display_name}</h1>",
             unsafe_allow_html=True
         )
