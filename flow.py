@@ -78,9 +78,10 @@ ARTISTS = [
     # "HAMZA",
     # "VALD",
     # "SOSO MANESS",
-    ############
-    "KALASH",
+
+    # "KALASH",
     # "MEDINE",
+    ############
     # "YOUSSOUPHA",
     # "MISTER YOU",
     # "SETH GUEKO",
@@ -378,7 +379,7 @@ if __name__ == "__main__":
           
 #           """)
     #run()
-    #delete_artist_from_db(DB_PATH, "GAZO")
+    #delete_artist_from_db(DB_PATH, "Ntmojo")
     #query("SHOW TABLES")
     get_audit_csv(True)
     get_db_table_schema()
