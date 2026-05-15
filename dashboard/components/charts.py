@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import sys, os
+import streamlit as st
 from data.transforms import safe_float
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -545,7 +546,7 @@ def vocab_evolution(df: pd.DataFrame) -> go.Figure:
         ("album_vocabulary_size", "Vocabulaire album", COLORS["primary"]),
         ("album_ttr",             "TTR",               COLORS["primary_light"]),
     ]
-    df2 = df.sort_values("release_year", na_position="last")
+    df2 = df.sort_values("release_year", na_position="last").reset_index(drop=True)
     x   = df2["album_name"]
 
     for col, label, color in pairs:
@@ -555,33 +556,50 @@ def vocab_evolution(df: pd.DataFrame) -> go.Figure:
         fig.add_trace(go.Scatter(
             x=x, y=df2[col], name=label,
             mode="lines+markers", yaxis=yax,
-            line=dict(color=color, width=2.5),
+            line=dict(color=color, width=2.5, shape="spline", smoothing=0.8),
             marker=dict(size=7, color=color),
+            customdata=df2["release_year"],
+            hovertemplate="<b>%{x}</b><br>%{customdata}<br>Nombre de mots : %{y:,.0f}<extra></extra>" if col != "album_ttr"
+                     else "<b>%{x}</b><br>%{customdata}<br>TTR : %{y:.3f}<extra></extra>",
         ))
 
+    n_albums = len(df2)
+    use_slider = n_albums > 8
+
+    xaxis_cfg = dict(
+        tickangle=-30,
+        gridcolor="#f0f0f0",
+        tickfont=dict(size=10),
+    )
+    if use_slider:
+        xaxis_cfg["rangeslider"] = dict(visible=True, thickness=0.08)
+        xaxis_cfg["range"] = [0, min(7, n_albums - 1)]
+
     fig.update_layout(
-        **_LAYOUT, height=260,
-        xaxis=dict(tickangle=-30, gridcolor="#f0f0f0", tickfont=dict(size=10)),
+        **_LAYOUT, height=400 if use_slider else 400,
+        xaxis=xaxis_cfg,
         yaxis=dict(gridcolor="#f0f0f0", title="Vocabulaire", tickfont=dict(size=10)),
         yaxis2=dict(overlaying="y", side="right", title="TTR",
                     tickformat=".3f", tickfont=dict(size=10)),
-        legend=dict(orientation="h", y=-0.3, font=dict(size=10)),
+        legend=dict(orientation="h", y=4, font=dict(size=10)),
     )
     return fig
 
 def emotion_donut_chart(avg_emotion_scores: str | None) -> go.Figure:
     if not avg_emotion_scores:
         return go.Figure()
-
+    
     scores = json.loads(avg_emotion_scores)
-    scores = {k: v for k, v in scores.items() if v > 0.01}
+    
+
+    scores = {k: v for k, v in scores.items() if v > 0}
     scores = dict(sorted(scores.items(), key=lambda x: x[1], reverse=True))
+    scores = dict(list(scores.items())[:14])
 
     n = len(scores)
     labels = [EMOTION_DISPLAY.get(k, k.capitalize()) for k in scores.keys()]
     values = list(scores.values())
     dominant = labels[0] if labels else ""
-
     # Dégradé vert clair → vert foncé selon le rang
     def interpolate_green(i, total):
         t = i / max(total - 1, 1)
