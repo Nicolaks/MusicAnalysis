@@ -93,3 +93,8 @@ LEXICAL_FIELD_DISPLAY = {
     "avg_lexical_street":   "Street",
     "avg_lexical_love":     "Amour",
 }
+
+ARTIST_DISPLAY_NAMES = {
+    "Ntmojo": "Suprême NTM",
+    # autres corrections...
+}

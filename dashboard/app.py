@@ -12,6 +12,7 @@ from components.styles import inject_global_css
 from data.loader import get_corpus_stats, get_artists, get_corpus_year_range
 from data.transforms import safe_float
 from components.metrics import kpi_row
+from config import ARTIST_DISPLAY_NAMES
 
 from pages import (
     portrait_artiste,
@@ -118,6 +119,9 @@ if page_key == "dashboard":
     import pandas as pd
 
     df_all = get_artists_comparison(artists)
+    
+    if not df_all.empty and ARTIST_DISPLAY_NAMES:
+        df_all["artist_name"] = df_all["artist_name"].replace(ARTIST_DISPLAY_NAMES)
 
     stats = get_corpus_stats()
     years = get_corpus_year_range()
@@ -156,9 +160,9 @@ if page_key == "dashboard":
         st.markdown('<div class="card-title">Top artistes : TTR</div>', unsafe_allow_html=True)
         if not df_all.empty and "career_ttr" in df_all.columns:
             from components.charts import artists_compare_bar
-            top_ttr = df_all.nlargest(10, "career_ttr")
+            top_ttr = df_all.nlargest(10, "avg_ttr")
             st.plotly_chart(
-                artists_compare_bar(top_ttr, "career_ttr", "TTR"),
+                artists_compare_bar(top_ttr, "avg_ttr", "TTR moyen"),
                 width="stretch"
             )
             st.markdown("A corriger il n'est pas représentatif", unsafe_allow_html=True)
