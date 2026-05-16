@@ -440,7 +440,7 @@ def scatter_ttr_streams(df: pd.DataFrame, x_col: str, y_col: str,
     )
     fig.update_traces(marker=dict(size=7, opacity=0.7, color=COLORS["primary"]))
     fig.update_layout(
-        **_LAYOUT, height=300,
+        **_LAYOUT, height=400,
         xaxis=dict(title=x_label, gridcolor="#f0f0f0"),
         yaxis=dict(title=y_label, gridcolor="#f0f0f0"),
     )

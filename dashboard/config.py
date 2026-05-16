@@ -10,8 +10,8 @@ GREEN_CARD   = "#0f3d25"
 
 COLORS = {
     "positive":  "#2e8a57",
-    "neutral":   "#888780",
-    "negative":  "#a32d2d",
+    "neutral":   "#88878061",
+    "negative":  "rgba(163,45,45,0.7)",
     "joie":      "#1a5c38",
     "tristesse": "#185fa5",
     "colere":    "#a32d2d",

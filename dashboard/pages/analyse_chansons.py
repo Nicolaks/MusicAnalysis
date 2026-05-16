@@ -73,8 +73,51 @@ def render():
             st.markdown(_top_tracks_html(top, "track_name"), unsafe_allow_html=True)
             st.caption("Colonne streams absente — ordre de la base.")
         st.markdown('</div>', unsafe_allow_html=True)
-
+        
     with col2:
+        st.markdown('<div class="card-title">Albums les plus streamés</div>', unsafe_allow_html=True)
+        if "album_name" in tracks.columns and stream_col:
+            album_streams = (
+                tracks.groupby("album_name")[stream_col]
+                .sum()
+                .reset_index(name="total_streams")
+                .sort_values("total_streams", ascending=True)
+                .tail(10)
+            )
+            n = len(album_streams)
+            height_album = 500 if n >= 10 else max(250, n * 32)
+            import plotly.graph_objects as go
+            fig_albums = go.Figure(go.Bar(
+                x=album_streams["total_streams"],
+                y=album_streams["album_name"].apply(lambda x: x[:20] + "…" if len(str(x)) > 20 else str(x)),
+                orientation="h",
+                marker=dict(
+                    color=album_streams["total_streams"],
+                    colorscale=[[0, "#e8f5ee"], [1, "#1a5c38"]],
+                    showscale=False,
+                ),
+                text=album_streams["total_streams"].apply(streams_label),
+                textposition="auto",
+                textfont=dict(size=10),
+                hovertemplate="<b>%{y}</b><br>%{text}<extra></extra>",
+            ))
+            fig_albums.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=height_album,
+                margin=dict(l=8, r=50, t=8, b=8),
+                font=dict(family="DM Sans", size=10),
+                xaxis=dict(showgrid=False, visible=False),
+                yaxis=dict(tickfont=dict(size=10)),
+            )
+            st.plotly_chart(fig_albums, use_container_width=True)
+        else:
+            st.info("Données streams absentes.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    col3 = st.container()
+
+    with col3:
         if stream_col and "ttr" in tracks.columns:
             st.markdown('<div class="card-title">Richesse lexicale vs Streams</div>',
                         unsafe_allow_html=True)
@@ -100,7 +143,7 @@ def render():
     st.markdown('<div class="card-title">Analyse détaillée d\'une chanson</div>',
                 unsafe_allow_html=True)
 
-    track_names = tracks["track_name"].dropna().sort_values().tolist()
+    track_names = tracks[tracks["artist_name"] == artist_name]["track_name"].dropna().sort_values().tolist()
     selected    = st.selectbox("Choisir un titre", track_names, key="track_detail")
 
     if selected:
@@ -115,108 +158,160 @@ def render():
         col_e, col_f, col_g = st.columns(3, gap="small")
 
         with col_e:
-            pos = safe_float(row.get("sentiment_positive", 0))
-            neu = safe_float(row.get("sentiment_neutral",  0))
-            neg = safe_float(row.get("sentiment_negative", 0))
-            if pos + neu + neg > 0:
-                st.caption("Tonalité")
-                st.plotly_chart(sentiment_donut(pos, neu, neg), width='stretch')
+            # Sentiment absent de la table — on affiche les émotions positives/négatives
+            import json
+            emo_raw = row.get("emotion_scores")
+            if emo_raw:
+                try:
+                    emo_parsed = json.loads(emo_raw) if isinstance(emo_raw, str) else emo_raw
+                    # Regroupe en positif/négatif/neutre
+                            
+                    pos_keys = {"espoir","gratitude", "envie", "embarras", "nostalgie", "surprise", "sympathie", "amour", "joie", "culpabilité"}
+                    neg_keys = {"méfiance", "désespoir","mépris","indignation", "jalousie", "honte", "dégoût", "peur", "colère", "tristesse"}
+                    pos = sum(v for k, v in emo_parsed.items() if k in pos_keys)
+                    neg = sum(v for k, v in emo_parsed.items() if k in neg_keys)
+                    neu = max(0, 1 - pos - neg)
+                    st.caption("Tonalité")
+                    st.plotly_chart(sentiment_donut(pos, neu, neg), use_container_width=True)
+                except Exception:
+                    st.info("Sentiment absent.")
             else:
                 st.info("Sentiment absent.")
 
         with col_f:
-            # Émotions dominantes
-            emo_cols = [f"emotion_{e}" for e in ["joie","tristesse","colere","peur","surprise","degout"]]
-            emo_vals = {EMOTION_DISPLAY.get(e, e): safe_float(row.get(f"emotion_{e}", None))
-                        for e in ["joie","tristesse","colere","peur","surprise","degout"]
-                        if row.get(f"emotion_{e}") is not None}
-            if emo_vals:
-                st.caption("Profil émotionnel")
-                import plotly.graph_objects as go
-                fig = go.Figure(go.Bar(
-                    x=list(emo_vals.values()),
-                    y=list(emo_vals.keys()),
-                    orientation="h",
-                    marker_color=COLORS["primary"],
-                ))
-                fig.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    height=180,
-                    margin=dict(l=8,r=8,t=8,b=8),
-                    font=dict(family="DM Sans", size=10),
-                    xaxis=dict(showgrid=False, visible=False),
-                    yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
-                )
-                st.plotly_chart(fig, width='stretch')
+            import json
+            emo_raw = row.get("emotion_scores")
+            if emo_raw:
+                try:
+                    emo_parsed = json.loads(emo_raw) if isinstance(emo_raw, str) else emo_raw
+                    emo_vals = dict(sorted(
+                        {k: v for k, v in emo_parsed.items() if v > 0}.items(),
+                        key=lambda x: x[1], reverse=True
+                    )[:6])
+
+                    if emo_vals:
+                        st.caption("Profil émotionnel")
+                        import plotly.graph_objects as go
+                        total = sum(emo_vals.values())
+                        n = len(emo_vals)
+
+                        def gradient_green(i, total):
+                            t = i / max(total - 1, 1)
+                            r = int(0x1a + (0xe8 - 0x1a) * t)
+                            g = int(0x5c + (0xf5 - 0x5c) * t)
+                            b = int(0x38 + (0xee - 0x38) * t)
+                            return f"rgb({r},{g},{b})"
+
+                        fig = go.Figure()
+                        for i, (emo, val) in enumerate(emo_vals.items()):
+                            pct = val / total * 100
+                            color = gradient_green(i, n)
+                            fig.add_trace(go.Bar(
+                                x=[""],
+                                y=[pct],
+                                width=[0.3],
+                                name=emo.capitalize(),
+                                marker_color=color,
+                                hovertemplate=f"<b>{emo.capitalize()}</b> : {pct:.1f}%<extra></extra>",
+                            ))
+                            
+                        fig.update_layout(
+                            barmode="stack",
+                            paper_bgcolor="rgba(0,0,0,0)",
+                            plot_bgcolor="rgba(0,0,0,0)",
+                            height=200,
+                            margin=dict(l=8, r=8, t=8, b=8),
+                            font=dict(family="DM Sans", size=10),
+                            xaxis=dict(showgrid=False, visible=False),
+                            yaxis=dict(showgrid=False, visible=False, range=[0, 100]),
+                            legend=dict(orientation="v", x=1.02, font=dict(size=9)),
+                            showlegend=True,
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("Émotions absentes.")
+                except Exception:
+                    st.info("Émotions absentes.")
             else:
                 st.info("Émotions absentes.")
 
         with col_g:
-            # Arc émotionnel
-            has_arc = any(row.get(f"arc_s1_{e}") is not None
-                         for e in ["joie","tristesse","colere"])
-            if has_arc:
-                st.caption("Arc émotionnel")
-                st.plotly_chart(emotion_arc_line(row), width='stretch')
+            import json
+            LEXICAL_COLORS = {
+                "argent":       "rgba(194,153,70,0.6)",
+                "rue":          "rgba(26,92,56,0.6)",
+                "famille":      "rgba(59,156,161,0.6)",
+                "drogue":       "rgba(83,74,183,0.6)",
+                "célébrité":    "rgba(207,131,92,0.6)",
+                "spiritualité": "rgba(15,110,86,0.6)",
+                "amour_perdu":  "rgba(201,104,122,0.6)",
+                "violence":     "rgba(163,45,45,0.6)",
+                "succès":       "rgba(46,138,87,0.6)",
+                "échec":        "rgba(79,93,117,0.6)",
+                "liberté":      "rgba(112,130,56,0.6)",
+                "prison":       "rgba(125,81,104,0.6)",
+                "mort":         "rgba(28,40,54,0.6)",
+                "fête":         "rgba(218,159,166,0.6)",
+                "sport":        "rgba(69,123,157,0.6)",
+                "mode":         "rgba(218,159,166,0.6)",
+                "voitures":     "rgba(107,114,92,0.6)",
+            }
+            FALLBACK = [
+                "rgba(244,162,97,0.6)",
+                "rgba(231,111,81,0.6)",
+                "rgba(38,70,83,0.6)",
+                "rgba(42,157,143,0.6)",
+                "rgba(233,196,106,0.6)",
+                "rgba(168,218,220,0.6)",
+                "rgba(69,123,157,0.6)",
+                "rgba(230,57,70,0.6)",
+            ]
+
+            lex_raw = row.get("lexical_field_scores")
+            if lex_raw:
+                try:
+                    lex_parsed = json.loads(lex_raw) if isinstance(lex_raw, str) else lex_raw
+                    lex_vals = dict(sorted(
+                        {k: v for k, v in lex_parsed.items() if v > 0}.items(),
+                        key=lambda x: x[1], reverse=True
+                    )[:6])
+
+                    if lex_vals:
+                        st.caption("Champs lexicaux")
+                        import plotly.graph_objects as go
+                        labels = [k.replace("_", " ").capitalize() for k in lex_vals.keys()]
+                        values = list(lex_vals.values())
+                        colors = [LEXICAL_COLORS.get(k, FALLBACK[i % len(FALLBACK)])
+                                  for i, k in enumerate(lex_vals.keys())]
+
+                        fig3 = go.Figure(go.Pie(
+                            labels=labels,
+                            values=values,
+                            hole=0.6,
+                            marker=dict(colors=colors, line=dict(color="#ffffff", width=2)),
+                            textinfo="none",
+                            hovertemplate="<b>%{label}</b> : %{percent}<extra></extra>",
+                            sort=False,
+                        ))
+                        dominant = labels[0] if labels else ""
+                        fig3.update_layout(
+                            annotations=[dict(
+                                text=f"<b>{dominant}</b>",
+                                x=0.5, y=0.5,
+                                font=dict(family="DM Sans", size=11, color="#444"),
+                                showarrow=False,
+                            )],
+                            paper_bgcolor="rgba(0,0,0,0)",
+                            height=200,
+                            margin=dict(l=8, r=8, t=8, b=8),
+                            font=dict(family="DM Sans", size=10),
+                            legend=dict(orientation="v", x=1.02, font=dict(size=9)),
+                            showlegend=True,
+                        )
+                        st.plotly_chart(fig3, use_container_width=True)
+                    else:
+                        st.info("Champs lexicaux absents.")
+                except Exception:
+                    st.info("Champs lexicaux absents.")
             else:
-                # Temps verbaux
-                tv = {
-                    "Passé":    safe_float(row.get("past_tense_ratio", None)),
-                    "Présent":  safe_float(row.get("present_tense_ratio", None)),
-                    "Futur":    safe_float(row.get("future_tense_ratio", None)),
-                }
-                if any(v > 0 for v in tv.values()):
-                    st.caption("Temps verbaux")
-                    import plotly.graph_objects as go
-                    fig2 = go.Figure(go.Bar(
-                        x=list(tv.keys()), y=list(tv.values()),
-                        marker_color=COLORS["primary"],
-                        text=[f"{v:.0%}" for v in tv.values()],
-                        textposition="outside",
-                    ))
-                    fig2.update_layout(
-                        paper_bgcolor="rgba(0,0,0,0)",
-                        plot_bgcolor="rgba(0,0,0,0)",
-                        height=180, margin=dict(l=8,r=8,t=8,b=8),
-                        font=dict(family="DM Sans", size=10),
-                        xaxis=dict(tickfont=dict(size=11)),
-                        yaxis=dict(showgrid=False, visible=False),
-                    )
-                    st.plotly_chart(fig2, width='stretch')
-                else:
-                    st.info("Arc / temps verbaux absents.")
-
-        # Émotion dominante
-        emo_dom = row.get("emotion_dominant")
-        if emo_dom and isinstance(emo_dom, str):
-            cls = f"emo-{emo_dom}"
-            st.markdown(
-                f'Émotion dominante : <span class="{cls}">{EMOTION_DISPLAY.get(emo_dom, emo_dom)}</span>',
-                unsafe_allow_html=True
-            )
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # ── Distribution émotions sur tout le catalogue ───────────────────────────
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    emo_dom_col = "emotion_dominant"
-    if emo_dom_col in tracks.columns and tracks[emo_dom_col].notna().any():
-        st.markdown('<div class="card-title">Distribution des émotions dominantes sur le catalogue</div>',
-                    unsafe_allow_html=True)
-        counts = tracks[emo_dom_col].value_counts()
-        import plotly.express as px
-        fig_pie = px.pie(
-            values=counts.values, names=counts.index,
-            color_discrete_sequence=["#1a5c38","#185fa5","#a32d2d","#534ab7","#854f0b","#0f6e56"],
-            hole=0.4,
-        )
-        fig_pie.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="DM Sans", size=11),
-            height=260,
-            legend=dict(orientation="h", y=-0.2),
-            margin=dict(l=8,r=8,t=8,b=8),
-        )
-        st.plotly_chart(fig_pie, width='stretch')
-        st.markdown('</div>', unsafe_allow_html=True)
+                st.info("Champs lexicaux absents.")
