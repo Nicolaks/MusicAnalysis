@@ -151,9 +151,11 @@ def render():
         "album_vocabulary_size":  "Vocabulaire",
         "album_ttr":              "TTR",
         "avg_rhyme_density":      "Densité rimes",
-        "avg_sentiment_positive": "Sentiment +",
-        "avg_sentiment_negative": "Sentiment −",
-        "avg_flesch_kincaid_grade": "FK Grade",
+        "avg_word_count":         "Moyenne de mots",
+        "album_vocabulary_size":  "Nombre de mots dans l'album",
+        "dominant_emotions":        "Emotions dominantes",
+        "dominant_lexical_fields": "Champs léxicaux dominants",
+
     }
     avail = {k: v for k, v in display_cols.items() if k in albums.columns}
     if avail:
