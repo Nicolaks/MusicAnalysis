@@ -90,3 +90,10 @@ def streams_label(n) -> str:
 
 def build_radar_values(row: pd.Series, keys: list[str]) -> dict:
     return {k: safe_float(row.get(k, 0)) for k in keys}
+
+def normalize_fk_grade(score: float, min_score: float, max_score: float) -> float:
+    if max_score == min_score:
+        return 0.5
+    clipped = max(min_score, min(max_score, score))
+    normalized = (clipped - min_score) / (max_score - min_score)
+    return round(max(0.05, 1 - normalized), 3)  # plancher à 0.05

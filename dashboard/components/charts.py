@@ -707,3 +707,193 @@ def emotion_lines(df: pd.DataFrame, x_col: str = "album_name") -> go.Figure:
         legend=dict(orientation="h", y=-0.35, font=dict(size=10)),
     )
     return fig
+
+def emotion_stacked_bars(df: pd.DataFrame, x_col: str = "album_name") -> go.Figure:
+    """Répartition émotionnelle par album en barres empilées 100%."""
+    import json
+
+    EMOTION_COLORS = {
+        "joie":        "rgba(46,138,87,0.6)",
+        "amour":       "rgba(201,104,122,0.6)",
+        "sympathie":   "rgba(207,131,92,0.6)",
+        "tristesse":   "rgba(24,95,165,0.6)",
+        "colère":      "rgba(163,45,45,0.6)",
+        "peur":        "rgba(83,74,183,0.6)",
+        "surprise":    "rgba(133,79,11,0.6)",
+        "dégoût":      "rgba(15,110,86,0.6)",
+        "nostalgie":   "rgba(136,135,128,0.6)",
+        "honte":       "rgba(125,81,104,0.6)",
+        "embarras":    "rgba(218,159,166,0.6)",
+        "culpabilité": "rgba(79,93,117,0.6)",
+        "envie":       "rgba(112,130,56,0.6)",
+        "jalousie":    "rgba(58,74,24,0.6)",
+        "gratitude":   "rgba(194,153,70,0.6)",
+        "indignation": "rgba(189,58,58,0.6)",
+        "mépris":      "rgba(90,107,124,0.6)",
+        "espoir":      "rgba(59,156,161,0.6)",
+        "désespoir":   "rgba(28,40,54,0.6)",
+        "méfiance":    "rgba(107,114,92,0.6)",
+    }
+    FALLBACK = [
+        "rgba(244,162,97,0.6)",
+        "rgba(231,111,81,0.6)",
+        "rgba(38,70,83,0.6)",
+        "rgba(42,157,143,0.6)",
+        "rgba(233,196,106,0.6)",
+        "rgba(168,218,220,0.6)",
+        "rgba(69,123,157,0.6)",
+        "rgba(230,57,70,0.6)",
+    ]
+    records = []
+    for _, row in df.iterrows():
+        raw = row.get("avg_emotion_scores")
+        parsed = {}
+        if raw:
+            try:
+                parsed = json.loads(raw)
+            except Exception:
+                pass
+        parsed[x_col] = row[x_col]
+        records.append(parsed)
+
+    emo_df = pd.DataFrame(records).set_index(x_col)
+    emo_cols = [c for c in emo_df.columns if c != x_col]
+
+    if not emo_cols:
+        return go.Figure()
+
+    # Top 6 émotions globales
+    global_means = emo_df[emo_cols].astype(float).mean()
+    top_cols = global_means.nlargest(8).index.tolist()
+
+    # Normalise chaque album à 100%
+    emo_df = emo_df[top_cols].astype(float)
+    totals = emo_df.sum(axis=1)
+    emo_pct = emo_df.div(totals, axis=0) * 100
+    
+    labels = [a[:18] + "…" if len(str(a)) > 12 else str(a) for a in emo_df.index]
+
+    fig = go.Figure()
+    fallback_i = 0
+    for col in top_cols:
+        if col in EMOTION_COLORS:
+            color = EMOTION_COLORS[col]
+        else:
+            color = FALLBACK[fallback_i % len(FALLBACK)]
+            fallback_i += 1
+
+        fig.add_trace(go.Bar(
+            name=col.capitalize(),
+            x=emo_pct.index,
+            y=emo_pct[col],
+            marker_color=color,
+            hovertemplate=f"<b>%{{x}}</b><br>{col.capitalize()} : %{{y:.1f}}%<extra></extra>",
+        ))
+
+    fig.update_layout(
+        **_LAYOUT,
+        barmode="stack",
+        height=550,
+        #xaxis=dict(tickangle=-30, gridcolor="#f0f0f0", tickfont=dict(size=10)),
+        xaxis=dict(
+                tickangle=-30,
+                gridcolor="#f0f0f0",
+                tickfont=dict(size=10),
+                tickmode="array",
+                tickvals=list(emo_df.index),
+                ticktext=labels,
+            ),
+        yaxis=dict(ticksuffix="%", gridcolor="#f0f0f0", tickfont=dict(size=10), range=[0, 100]),
+        legend=dict(orientation="h", y=-0.35, font=dict(size=10)),
+    )
+    return fig
+
+def lexical_area(df):
+    import json
+
+    LEXICAL_COLORS = {
+        "argent":       "rgba(133,79,11,0.35)",
+        "rue":          "rgba(26,92,56,0.35)",
+        "famille":      "rgba(24,95,165,0.35)",
+        "drogue":       "rgba(83,74,183,0.35)",
+        "célébrité":    "rgba(136,135,128,0.35)",
+        "spiritualité": "rgba(15,110,86,0.35)",
+        "amour_perdu":  "rgba(163,45,45,0.35)",
+        "violence":     "rgba(163,45,45,0.35)",
+        "succès":       "rgba(46,138,87,0.35)",
+        "échec":        "rgba(24,95,165,0.35)",
+        "liberté":      "rgba(93,191,138,0.35)",
+        "prison":       "rgba(83,74,183,0.35)",
+        "mort":         "rgba(26,92,56,0.35)",
+        "fête":         "rgba(133,79,11,0.35)",
+        "sport":        "rgba(15,110,86,0.35)",
+        "mode":         "rgba(136,135,128,0.35)",
+        "voitures":     "rgba(133,79,11,0.35)",
+    }
+    FALLBACK = [
+        "rgba(244,162,97,0.35)",
+        "rgba(231,111,81,0.35)",
+        "rgba(38,70,83,0.35)",
+        "rgba(42,157,143,0.35)",
+        "rgba(233,196,106,0.35)",
+        "rgba(168,218,220,0.35)",
+    ]
+
+    if "avg_lexical_field_scores" not in df.columns:
+        return go.Figure()
+
+    # Parse JSON par album
+    records = []
+    for _, row in df.iterrows():
+        raw = row.get("avg_lexical_field_scores")
+        parsed = {}
+        if raw:
+            try:
+                parsed = json.loads(raw)
+            except Exception:
+                pass
+        parsed["album_name"] = row["album_name"]
+        records.append(parsed)
+
+    lex_df = pd.DataFrame(records).set_index("album_name")
+    lex_cols = [c for c in lex_df.columns if c != "album_name"]
+
+    if not lex_cols:
+        return go.Figure()
+
+    # Top 4 champs lexicaux globaux
+    global_means = lex_df[lex_cols].astype(float).mean()
+    top4 = global_means.nlargest(8).index.tolist()
+
+    df2 = df.sort_values("release_year", na_position="last")
+    lex_df = lex_df.reindex(df2["album_name"])
+    
+    labels = [a[:18] + "…" if len(str(a)) > 12 else str(a) for a in lex_df.index]
+
+    fig = go.Figure()
+    for i, (col, _) in enumerate(zip(top4, range(len(top4)))):
+        color = LEXICAL_COLORS.get(col, FALLBACK[i % len(FALLBACK)])
+        fig.add_trace(go.Scatter(
+            x=lex_df.index,
+            y=lex_df[col].astype(float),
+            name=col.capitalize().replace("_", " "),
+            mode="lines+markers",
+            stackgroup="one",
+            line=dict(color=color, width=1.5),
+            fillcolor=color,
+            hovertemplate=f"<b>%{{x}}</b><br>{col.capitalize()} : %{{y:.3f}}<extra></extra>",
+        ))
+
+    fig.update_layout(
+        **_LAYOUT, height=540,
+        xaxis=dict(
+                tickangle=-30,
+                tickfont=dict(size=10),
+                tickmode="array",
+                tickvals=list(lex_df.index),
+                ticktext=labels,
+            ),
+        yaxis=dict(gridcolor="#f0f0f0", tickformat=".3f"),
+        legend=dict(orientation="h", y=-0.35, font=dict(size=10)),
+    )
+    return fig
