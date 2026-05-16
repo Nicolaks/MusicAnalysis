@@ -84,15 +84,17 @@ ARTISTS = [
     # "MISTER YOU",
     # "SETH GUEKO",
     # "AYA NAKAMURA",
-    # ############
-    "KERY JAMES",
-    "NAPS",
-    "MAES",
-    "NEKFEU",
+    # # ############
+    # "KERY JAMES",
+    # "NAPS",
+    # "MAES",
+    # "NEKFEU",
     # "LETO",
-    # "JOK'HAIR",
+    # "JOK'AIR",
     # "ROHFF",
-    
+    # "Freeze corleone",
+    # "Gringe",
+    # "MHD",
 ]
 
 # ─────────────────────────────────────────────
