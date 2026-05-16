@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from data.loader import get_albums
 from data.transforms import safe_float
 from components.charts import (sentiment_line, emotion_heatmap,
-                                vocab_evolution)
+                                vocab_evolution, emotion_lines)
 from components.filters import artist_selector
 from config import LEXICAL_FIELD_DISPLAY
 from config import EMOTION_LABELS
@@ -94,16 +94,13 @@ def render():
     col1 = st.container()
 
     with col1:
-        st.markdown('<div class="card-title">Évolution du sentiment par album</div>', unsafe_allow_html=True)
-        has_sent = any(c in albums.columns for c in
-                       ["avg_sentiment_positive", "avg_sentiment_negative"])
-        if has_sent:
-            st.plotly_chart(sentiment_line(albums), width="stretch")
+        st.markdown('<div class="card-title">Évolution des 4 émotions dominantes de l\'artiste par album</div>', unsafe_allow_html=True)
+        has_emo = "avg_emotion_scores" in albums.columns and albums["avg_emotion_scores"].notna().any()
+        if has_emo:
+            st.plotly_chart(emotion_lines(albums), use_container_width=True)
         else:
-            st.info("Données sentiment absentes.")
+            st.info("Données émotions absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
-        
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
         
     col2 = st.container()
 

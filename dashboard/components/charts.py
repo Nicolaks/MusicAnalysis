@@ -142,8 +142,9 @@ def audio_radar_chart(artist_df: pd.DataFrame, compare_df: pd.DataFrame | None =
 
 # ── Sentiment line ───────────────────────────────────────────────────────────
 
-def sentiment_line(df: pd.DataFrame, x_col: str = "album_name") -> go.Figure:
+def sentiment_line(df: pd.DataFrame | None, x_col: str = "album_name") -> go.Figure:
     fig = go.Figure()
+    
     pairs = [
         ("avg_sentiment_positive", "Positif",  COLORS["positive"]),
         ("avg_sentiment_neutral",  "Neutre",   COLORS["neutral"]),
@@ -630,5 +631,79 @@ def emotion_donut_chart(avg_emotion_scores: str | None) -> go.Figure:
         showlegend=False,
         **_LAYOUT,
         height=280,
+    )
+    return fig
+
+def emotion_lines(df: pd.DataFrame, x_col: str = "album_name") -> go.Figure:
+    import json
+
+    EMOTION_COLORS = {
+        # --- LE TRIO CORRIGÉ & DIFFÉRENCIÉ ---
+        "joie":        "#2e8a57",  # Vert forêt (ton code d'origine)
+        "amour":       "#c9687a",  # Vieux rose / Framboise douce (exit le vert !)
+        "sympathie":   "#cf835c",  # Terracotta / Abricot poudré chaleureux
+        "tristesse":   "#185fa5",  # Bleu franc éteint
+        "colère":      "#a32d2d",  # Rouge brique sombre
+        "peur":        "#534ab7",  # Violet bleuté sourd
+        "surprise":    "#854f0b",  # Ocre / Moutarde foncé
+        "dégoût":      "#0f6e56",  # Vert pin foncé
+        "nostalgie":   "#888780",  # Gris moyen chaud
+        "honte":       "#7d5168",  # Prune / Vieux rose violacé
+        "embarras":    "#da9fa6",  # Rose poudré clair (distinct d'amour)
+        "culpabilité": "#4f5d75",  # Bleu ardoise
+        "envie":       "#708238",  # Vert olive
+        "jalousie":    "#3a4a18",  # Vert armée très sombre
+        "gratitude":   "#c29946",  # Or mat / Ambré
+        "indignation": "#bd3a3a",  # Rouge sang de bœuf (plus vif que la colère)
+        "mépris":      "#5a6b7c",  # Gris acier froid
+        "espoir":      "#3b9ca1",  # Turquoise canard doux
+        "désespoir":   "#1c2836",  # Bleu nuit profond
+        "méfiance":    "#6b725c",  # Kaki grisâtre / Terreux
+    }
+    FALLBACK = [c for c in [
+        "#f4a261", "#e76f51", "#264653", "#2a9d8f",
+        "#e9c46a", "#a8dadc", "#457b9d", "#e63946",
+    ] if c not in EMOTION_COLORS.values()]
+
+    records = []
+    for _, row in df.iterrows():
+        raw = row.get("avg_emotion_scores")
+        parsed = {}
+        if raw:
+            try:
+                parsed = json.loads(raw)
+            except Exception:
+                pass
+        parsed[x_col] = row[x_col]
+        records.append(parsed)
+
+    emo_df = pd.DataFrame(records).set_index(x_col)
+    emo_cols = [c for c in emo_df.columns if c != x_col]
+
+    if not emo_cols:
+        return go.Figure()
+
+    # Top 4 émotions sur la moyenne globale de tous les albums
+    global_means = emo_df[emo_cols].astype(float).mean()
+    top4 = global_means.nlargest(4).index.tolist()
+
+    fig = go.Figure()
+    for i, col in enumerate(top4):
+        color = EMOTION_COLORS.get(col, FALLBACK[i % len(FALLBACK)])
+        fig.add_trace(go.Scatter(
+            x=emo_df.index,
+            y=emo_df[col].astype(float),
+            name=col.capitalize(),
+            mode="lines+markers",
+            line=dict(color=color, width=2.5, shape="spline", smoothing=0.8),
+            marker=dict(size=7, color=color),
+            hovertemplate=f"<b>%{{x}}</b><br>{col.capitalize()} : %{{y:.3f}}<extra></extra>",
+        ))
+
+    fig.update_layout(
+        **_LAYOUT, height=450,
+        xaxis=dict(tickangle=-30, gridcolor="#f0f0f0", tickfont=dict(size=10)),
+        yaxis=dict(gridcolor="#f0f0f0", tickformat=".3f"),
+        legend=dict(orientation="h", y=-0.35, font=dict(size=10)),
     )
     return fig
