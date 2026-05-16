@@ -65,8 +65,8 @@ def render():
             
 
             - **Rimes** :  
-            `0 → 1`  
-            Fréquence des schémas de rimes dans les paroles. Indique le niveau de travail phonique.
+            `0 → +∞`  
+            Fréquence moyenne des rimes par phrase. Indique le niveau de travail phonique.
 
             - **Richesse vocab. (hapax)** :  
             `0 → 1`  
@@ -253,28 +253,28 @@ def render():
     
     cols_stylo_expl = [
         "<b>Ratio noms</b> : structure plus descriptive et statique du texte (univers, objets, scènes). <br>"
-        " <ul><li><i> < 0.12 : très narratif/verbal</i></li> <li> <i> 0.12 → 0.20 : équilibré</i> </li> <li><i> 0.20 → 0.28 : descriptif</i></li> <li><i> > 0.28 : très imagé</i></li></ul>",
+        "<ul><li><i>< 0.16 : très narratif/verbal</i></li><li><i>0.16 → 0.18 : équilibré</i></li><li><i>0.18 → 0.20 : descriptif</i></li><li><i>> 0.20 : très imagé</i></li></ul>",
 
         "<b>Ratio verbes</b> : intensité narrative et dynamique du discours. <br>"
-        " <ul><li><i>< 0.08 : texte statique</i></li><li><i>0.08 → 0.14 : équilibré</i></li><li><i>0.14 → 0.20 : narratif / dynamique</i></li><li><i>> 0.20 : très dynamique</i></li></ul>",
+        "<ul><li><i>< 0.09 : texte statique</i></li><li><i>0.09 → 0.11 : équilibré</i></li><li><i>0.11 → 0.12 : narratif / dynamique</i></li><li><i>> 0.12 : très dynamique</i></li></ul>",
 
         "<b>Ratio adj.</b> : richesse descriptive et précision des images. <br>"
-        " <ul><li><i>< 0.03 : style brut / direct</i></li><li><i>0.03 → 0.07 : standard</i></li><li><i>0.07 → 0.12 : descriptif</i></li><li><i>> 0.12 : très visuel / littéraire</i></li></ul>",
+        "<ul><li><i>< 0.045 : style brut / direct</i></li><li><i>0.045 → 0.055 : standard</i></li><li><i>0.055 → 0.075 : descriptif</i></li><li><i>> 0.075 : très visuel / littéraire</i></li></ul>",
 
-        "<b>Ratio je/j’</b> : présence de l’artiste dans le texte. <br>"
-        " <ul><li><i>< 0.03 : narration impersonnelle</i></li><li><i>0.03 → 0.08 : présence modérée</i></li><li><i>0.08 → 0.15 : introspection forte</i></li><li><i>> 0.15 : écriture très personnelle</i></li></ul>",
+        "<b>Ratio je/j'</b> : présence de l'artiste dans le texte. <br>"
+        "<ul><li><i>< 0.015 : narration impersonnelle</i></li><li><i>0.015 → 0.035 : présence modérée</i></li><li><i>0.035 → 0.050 : introspection forte</i></li><li><i>> 0.050 : écriture très personnelle</i></li></ul>",
 
         "<b>Densité rimes</b> : travail de musicalité et de structure sonore. <br>"
-       " <ul><li><i>< 0.8 : faible</i></li><li><i>0.8 → 1.3 : moyenne</i></li><li><i>1.3 → 1.8 : élevée</i></li><li><i>1.8 → 2.5 : très technique</i></li><li><i>> 2.5 : extrêmement dense</i></li></ul>",
+        "<ul><li><i>< 1.0 : faible</i></li><li><i>1.0 → 1.5 : moyenne</i></li><li><i>1.5 → 2.0 : élevée</i></li><li><i>2.0 → 2.5 : très technique</i></li><li><i>> 2.5 : extrêmement dense</i></li></ul>",
 
-        "<b>Syl./ligne</b> : complexité rythmique et densité du flow. <br>"
-        " <ul><li><i>< 8 : flow simple / direct</i></li><li><i>8 → 12 : densité standard</i></li><li><i>12 → 16 : flow dense</i></li><li><i>> 16 : très technique / chargé</i></li><br></ul>",
+        "<b>Syl./ligne</b> : complexité rythmique et densité du flow. <br><br> "
+        "<ul><li><i>< 10 : flow simple / direct</i></li><li><i>10 → 14 : densité standard</i></li><li><i>14 → 17 : flow dense</i></li><li><i>> 17 : très technique / chargé</i></li></ul>",
 
         "<b>Long. mot moy.</b> : sophistication lexicale globale. <br>"
-        " <ul><li><i>< 4.3 : langage simple / oral</i></li><li><i>4.3 → 5.0 : standard</i></li><li><i>5.0 → 5.6 : soutenu</i></li><li><i>> 5.6 : très sophistiqué</i></li></ul>",
+        "<ul><li><i>< 5.0 : langage simple / oral</i></li><li><i>5.0 → 5.5 : standard</i></li><li><i>5.5 → 5.9 : soutenu</i></li><li><i>> 5.9 : très sophistiqué</i></li></ul>",
 
         "<b>Ratio hapax</b> : créativité lexicale et diversité des mots. <br>"
-        " <ul><li><i>< 0.45 : écriture répétitive</i></li><li><i>0.45 → 0.65 : vocabulaire varié</i></li><li><i>0.65 → 0.80 : forte richesse lexicale</i></li><li><i>> 0.80 : diversité lexicale exceptionnelle</i></li></ul>",
+        "<ul><li><i>< 0.60 : écriture répétitive</i></li><li><i>0.60 → 0.75 : vocabulaire varié</i></li><li><i>0.75 → 0.83 : forte richesse lexicale</i></li><li><i>> 0.83 : diversité lexicale exceptionnelle</i></li></ul>",
     ]
     
     c = st.columns(2, gap="small")
@@ -282,12 +282,30 @@ def render():
         val = safe_float(artist.get(col_key, None))
         display_val = f"{val:.3f}" if val is not None else "—"
 
+        c_min    = safe_float(corpus.get(f"{col_key}_min", None))
+        c_max    = safe_float(corpus.get(f"{col_key}_max", None))
+        c_avg    = safe_float(corpus.get(f"{col_key}_avg", None))
+        c_median = safe_float(corpus.get(f"{col_key}_median", None))
+
+        corpus_html = ""
+        if all(x is not None for x in [c_min, c_max, c_avg, c_median]):
+            corpus_html = f"""
+            <div style='font-size:0.75em; opacity:0.6; margin-top:2px; display:flex; gap:12px; flex-wrap:wrap;'>
+                <span>Moy. <b>{c_avg:.3f}</b></span>
+                <span>Méd. <b>{c_median:.3f}</b></span>
+                <span>Min <b>{c_min:.3f}</b></span>
+                <span>Max <b>{c_max:.3f}</b></span>
+            </div>
+            """
+
         with c[i % 2]:
             st.metric(col_label, display_val)
             st.markdown(
                 f"<div style='font-size:0.8em; opacity:0.7; margin-top:-8px'>{expl}</div>",
                 unsafe_allow_html=True
             )
+            if corpus_html:
+                st.markdown(corpus_html, unsafe_allow_html=True)
             st.markdown("<div style='height:-2px'></div><hr style='opacity:0.5'>", unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)

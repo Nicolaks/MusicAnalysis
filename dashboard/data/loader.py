@@ -325,25 +325,37 @@ def get_corpus_stats(db_path: Path = DB_PATH) -> dict:
             "SELECT COALESCE(SUM(word_count),0) FROM tracks_analysis"
         ).fetchone()[0]
 
-        # Stats min/max/avg pour identity_card_chart
-        metrics = [
-            ("avg_word_count",      "wc"),
-            ("avg_ttr",             "ttr"),
-            ("avg_rhyme_density",   "rhyme"),
-            ("avg_hapax_ratio",     "hapax"),
-            ("avg_pronoun_i_ratio", "i"),
-            ("avg_repetition_ratio","rep"),
-            ("avg_word_length",     "wl"),
+                # Stats pour les métriques stylométriques de portrait_artiste
+        stylo_metrics = [
+            "avg_pos_noun_ratio",
+            "avg_pos_verb_ratio",
+            "avg_pos_adj_ratio",
+            "avg_pos_adv_ratio",
+            "avg_pos_pron_ratio",
+            "avg_pronoun_i_ratio",
+            "avg_pronoun_we_ratio",
+            "avg_pronoun_you_ratio",
+            "avg_rhyme_density",
+            "avg_syllables_line",
+            "avg_repetition_ratio",
+            "avg_flesch_reading_ease",
+            "avg_flesch_kincaid_grade",
+            "avg_word_length",
+            "avg_semantic_density",
+            "avg_lexical_diversity",
+            "avg_hapax_ratio",
         ]
-        for col, prefix in metrics:
+        for col in stylo_metrics:
             row = con.execute(f"""
-                SELECT MIN({col}), MAX({col}), AVG({col})
+                SELECT MIN({col}), MAX({col}), AVG({col}),
+                       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {col})
                 FROM artists_analysis
                 WHERE {col} IS NOT NULL
             """).fetchone()
-            r[f"{prefix}_min"] = row[0] or 0
-            r[f"{prefix}_max"] = row[1] or 1
-            r[f"{prefix}_avg"] = row[2] or 0.5
+            r[f"{col}_min"]    = row[0] or 0
+            r[f"{col}_max"]    = row[1] or 1
+            r[f"{col}_avg"]    = row[2] or 0
+            r[f"{col}_median"] = row[3] or 0
             
         # Moyenne des champs lexicaux
         rows_lex = con.execute("""

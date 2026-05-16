@@ -175,30 +175,60 @@ def emotion_heatmap(df: pd.DataFrame) -> go.Figure:
     if not cols_present or df.empty:
         return go.Figure()
 
-    # Garde seulement les 9 émotions avec moyenne la plus haute
+    EMOTION_COLORS = {
+        "joie":        "#2e8a57",
+        "amour":       "#c9687a",
+        "sympathie":   "#cf835c",
+        "tristesse":   "#185fa5",
+        "colère":      "#a32d2d",
+        "peur":        "#534ab7",
+        "surprise":    "#854f0b",
+        "dégoût":      "#0f6e56",
+        "nostalgie":   "#888780",
+        "honte":       "#7d5168",
+        "embarras":    "#da9fa6",
+        "culpabilité": "#4f5d75",
+        "envie":       "#708238",
+        "jalousie":    "#3a4a18",
+        "gratitude":   "#c29946",
+        "indignation": "#bd3a3a",
+        "mépris":      "#5a6b7c",
+        "espoir":      "#3b9ca1",
+        "désespoir":   "#1c2836",
+        "méfiance":    "#6b725c",
+    }
+    FALLBACK = ["#f4a261", "#e76f51", "#264653", "#2a9d8f", "#e9c46a", "#a8dadc", "#457b9d", "#e63946"]
+
+    def hex_to_rgb(h):
+        h = h.lstrip("#")
+        return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+    def interpolate_color(base_hex: str, t: float) -> str:
+        """t=0 → très clair, t=1 → couleur pleine."""
+        r, g, b = hex_to_rgb(base_hex)
+        # Mélange avec blanc (255,255,255) selon t
+        r2 = int(255 + (r - 255) * t)
+        g2 = int(255 + (g - 255) * t)
+        b2 = int(255 + (b - 255) * t)
+        return f"rgb({r2},{g2},{b2})"
+
     means = df[cols_present].mean()
     cols_present = means.sort_values(ascending=False).head(9).index.tolist()
 
-    # Tronque les noms d'albums
     albums = [a[:15] + "…" if len(str(a)) > 15 else str(a) for a in df.index.tolist()]
     emotions = [EMOTION_DISPLAY.get(c, c.capitalize()) for c in cols_present]
-    n = len(cols_present)
-
-    def interpolate_green(i, total):
-        t = i / max(total - 1, 1)
-        r = int(166 + (26  - 166) * t)
-        g = int(210 + (92  - 210) * t)
-        b = int(140 + (56  - 140) * t)
-        return f"rgb({r},{g},{b})"
 
     fig = go.Figure()
 
     for i, (col, emo_label) in enumerate(zip(cols_present, emotions)):
+        base_color = EMOTION_COLORS.get(col, FALLBACK[i % len(FALLBACK)])
         vals = df[col].fillna(0).values
         vmax = vals.max() if vals.max() > 0 else 1
-        # Écart amplifié : 4px → 44px
-        sizes = [3 + (v / vmax) ** 0.6 * 19 for v in vals]
-        color = interpolate_green(i, n)
+
+        # t : 0 = valeur faible (clair), 1 = valeur max (foncé)
+        t_vals = [(v / vmax) ** 0.6 for v in vals]
+        colors = [interpolate_color(base_color, t) for t in t_vals]
+        sizes  = [3 + t * 19 for t in t_vals]
 
         fig.add_trace(go.Scatter(
             x=albums,
@@ -207,7 +237,7 @@ def emotion_heatmap(df: pd.DataFrame) -> go.Figure:
             name=emo_label,
             marker=dict(
                 size=sizes,
-                color=color,
+                color=colors,
                 opacity=0.9,
                 line=dict(color="#ffffff", width=1.5),
             ),
@@ -217,21 +247,10 @@ def emotion_heatmap(df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         **_LAYOUT,
-        height=max(300, 55 * len(cols_present) + 80),  # 44 → 55
+        height=max(300, 55 * len(cols_present) + 80),
         showlegend=False,
-        xaxis=dict(
-            tickangle=-35,
-            tickfont=dict(size=13, color="#888"),
-            showgrid=False,
-            zeroline=False,
-        ),
-        yaxis=dict(
-            tickfont=dict(size=15, color="#555"),
-            showgrid=True,
-            gridcolor="#f0f0f0",
-            gridwidth=1,
-            zeroline=False,
-        ),
+        xaxis=dict(tickangle=-35, tickfont=dict(size=13, color="#888"), showgrid=False, zeroline=False),
+        yaxis=dict(tickfont=dict(size=15, color="#555"), showgrid=True, gridcolor="#f0f0f0", gridwidth=1, zeroline=False),
     )
     return fig
 
