@@ -18,7 +18,28 @@ from config import (NLP_FEATURES, NLP_FEATURES_DISPLAY, RADAR_KEYS,
 
 
 def _multi_radar(df: pd.DataFrame) -> go.Figure:
-    palette = ["#1a5c38", "#185fa5", "#a32d2d", "#534ab7", "#854f0b", "#0f6e56"]
+    palette = [
+        ("rgba(26,92,56,1)",     "rgba(26,92,56,0.15)"),
+        ("rgba(24,95,165,1)",    "rgba(24,95,165,0.15)"),
+        ("rgba(163,45,45,1)",    "rgba(163,45,45,0.15)"),
+        ("rgba(83,74,183,1)",    "rgba(83,74,183,0.15)"),
+        ("rgba(133,79,11,1)",    "rgba(133,79,11,0.15)"),
+        ("rgba(15,110,86,1)",    "rgba(15,110,86,0.15)"),
+        ("rgba(201,104,122,1)",  "rgba(201,104,122,0.15)"),
+        ("rgba(207,131,92,1)",   "rgba(207,131,92,0.15)"),
+        ("rgba(59,156,161,1)",   "rgba(59,156,161,0.15)"),
+        ("rgba(125,81,104,1)",   "rgba(125,81,104,0.15)"),
+        ("rgba(112,130,56,1)",   "rgba(112,130,56,0.15)"),
+        ("rgba(194,153,70,1)",   "rgba(194,153,70,0.15)"),
+        ("rgba(79,93,117,1)",    "rgba(79,93,117,0.15)"),
+        ("rgba(189,58,58,1)",    "rgba(189,58,58,0.15)"),
+        ("rgba(90,107,124,1)",   "rgba(90,107,124,0.15)"),
+        ("rgba(107,114,92,1)",   "rgba(107,114,92,0.15)"),
+        ("rgba(244,162,97,1)",   "rgba(244,162,97,0.15)"),
+        ("rgba(42,157,143,1)",   "rgba(42,157,143,0.15)"),
+        ("rgba(69,123,157,1)",   "rgba(69,123,157,0.15)"),
+        ("rgba(218,159,166,1)",  "rgba(218,159,166,0.15)"),
+    ]
     fig = go.Figure()
     for i, (_, row) in enumerate(df.iterrows()):
         raw   = {RADAR_DISPLAY[k]: safe_float(row.get(k, 0)) for k in RADAR_KEYS if k in row.index}
@@ -27,12 +48,12 @@ def _multi_radar(df: pd.DataFrame) -> go.Figure:
             continue
         cats  = list(normd.keys()) + [list(normd.keys())[0]]
         vals  = list(normd.values()) + [list(normd.values())[0]]
-        color = palette[i % len(palette)]
+        line_color, fill_color = palette[i % len(palette)]
         fig.add_trace(go.Scatterpolar(
             r=vals, theta=cats, name=row.get("artist_name", f"Artiste {i}"),
             fill="toself",
-            line=dict(color=color, width=2),
-            fillcolor=color + "25",
+            line=dict(color=line_color, width=2),
+            fillcolor=fill_color,
         ))
     fig.update_layout(
         polar=dict(
