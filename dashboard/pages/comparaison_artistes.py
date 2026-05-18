@@ -3,17 +3,22 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import sys, os
+import json
+import numpy as np
+
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from data.loader import get_artists_comparison
 from data.transforms import safe_float, normalize_radar
 from components.charts import artists_compare_bar, _LAYOUT
 from components.artist_header import artist_header
-from data.loader import get_artist, get_albums, get_tracks, get_artist_url
+from data.loader import get_artist, get_albums, get_tracks, get_artist_url, get_embeddings_all_artists
 from components.filters import artist_selector
 from components.filters import multi_artist_selector, metric_selector
 from config import (NLP_FEATURES, NLP_FEATURES_DISPLAY, RADAR_KEYS,
                     RADAR_DISPLAY, COLORS, EMOTION_LABELS, EMOTION_DISPLAY)
+from sklearn.decomposition import PCA
+import plotly.graph_objects as go
 
 
 
@@ -67,6 +72,91 @@ def _multi_radar(df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
+def centroid_chart(names: list[str], embs: np.ndarray, selected: list[str] = None) -> go.Figure:
+    selected = selected or []
+    
+    pca = PCA(n_components=3)
+    coords = pca.fit_transform(embs)
+
+    palette = ["#1a5c38", "#185fa5", "#a32d2d", "#534ab7", "#854f0b", "#0f6e56",
+               "#c9687a", "#cf835c", "#3b9ca1", "#708238"]
+
+    fig = go.Figure()
+
+    # Artistes non sélectionnés — quasi invisibles pour garder le contexte spatial
+    mask_others = np.array([n not in selected for n in names])
+    fig.add_trace(go.Scatter3d(
+        x=coords[mask_others, 0],
+        y=coords[mask_others, 1],
+        z=coords[mask_others, 2],
+        mode="markers",
+        text=[n for n, m in zip(names, mask_others) if m],
+        hovertemplate="<b>%{text}</b><extra></extra>",
+        marker=dict(size=4, color="rgba(200,200,200,0.04)", line=dict(width=0)),
+        showlegend=False,
+    ))
+
+    # Artistes sélectionnés mis en valeur
+    for i, artist in enumerate(selected):
+        if artist not in names:
+            continue
+        idx = names.index(artist)
+        color = palette[i % len(palette)]
+        fig.add_trace(go.Scatter3d(
+            x=[coords[idx, 0]],
+            y=[coords[idx, 1]],
+            z=[coords[idx, 2]],
+            mode="markers+text",
+            name=artist,
+            text=[artist],
+            textposition="top center",
+            textfont=dict(size=10, family="DM Sans", color=color),
+            hovertemplate=f"<b>{artist}</b><extra></extra>",
+            marker=dict(size=10, color=color, line=dict(color="#ffffff", width=1.5)),
+        ))
+
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(210,225,245,0.5)",
+        scene=dict(
+            bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(
+                title=dict(text="Composante 1", font=dict(size=10, color="#aaa")),
+                showticklabels=False,
+                gridcolor="rgba(180,200,230,0.5)",
+                backgroundcolor="rgb(220,232,248)",
+                showbackground=True,
+                linecolor="rgba(150,180,220,0.8)",
+                linewidth=2,
+                showline=True,
+            ),
+            yaxis=dict(
+                title=dict(text="Composante 2", font=dict(size=10, color="#aaa")),
+                showticklabels=False,
+                gridcolor="rgba(180,200,230,0.5)",
+                backgroundcolor="rgb(220,232,248)",
+                showbackground=True,
+                linecolor="rgba(150,180,220,0.8)",
+                linewidth=2,
+                showline=True,
+            ),
+            zaxis=dict(
+                title=dict(text="Composante 3", font=dict(size=10, color="#aaa")),
+                showticklabels=False,
+                gridcolor="rgba(180,200,230,0.5)",
+                backgroundcolor="rgb(220,232,248)",
+                showbackground=True,
+                linecolor="rgba(150,180,220,0.8)",
+                linewidth=2,
+                showline=True,
+            ),
+        ),
+        font=dict(family="DM Sans", size=10),
+        height=700,
+        margin=dict(l=0, r=0, t=0, b=40),
+        legend=dict(orientation="h", y=-0.05, font=dict(size=10)),
+    )
+    return fig
 
 def _emotion_grouped_bar(df: pd.DataFrame) -> go.Figure:
     palette = ["#1a5c38","#185fa5","#a32d2d","#534ab7","#854f0b","#0f6e56"]
@@ -103,11 +193,6 @@ def render():
     if df.empty:
         st.warning("Aucune donnée disponible pour ces artistes.")
         return
-    
-    artist_name = artist_selector(key="portrait_artist")
-    artist = get_artist(artist_name)
-    artist_image_url = get_artist_url(artist_name)
-    artist_header(artist, artist_image_url)
 
     st.caption(f"{len(df)} artistes comparés")
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -160,58 +245,49 @@ def render():
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    
+    col3 = st.container()
+    
+    with col3:
+        st.markdown('<div class="card-title">Comparaison 3D des artistes</div>', unsafe_allow_html=True)
+        
+        rows  = get_embeddings_all_artists()
+        names = [r[0] for r in rows]
+        embs  = np.array([json.loads(r[1]) for r in rows])
 
-    # ── Bar chart par métrique ─────────────────────────────────────────────────
-    st.markdown('<div class="card-title">Classement par métrique NLP</div>',
-                unsafe_allow_html=True)
+        fig_centroid = centroid_chart(names, embs, selected=artist_names)
+        
+        if fig_centroid.data:
+            st.plotly_chart(fig_centroid, use_container_width=True, key="Centroid 3D")
+        else:
+            st.error("Informations indisponibles pour les artistes sélectionnés")
+            
+        st.markdown("""
+            <div style="
+                background: linear-gradient(135deg, rgba(220,232,248,0.4) 0%, rgba(232,245,238,0.4) 100%);
+                border-radius: 12px;
+                padding: 20px 24px;
+                margin-top: 12px;
+                border-left: 3px solid rgba(130,165,210,0.6);
+                font-family: 'DM Sans', sans-serif;
+            ">
+                <div style="font-size: 0.95em; font-weight: 600; color: #1a5c38; margin-bottom: 10px;">
+                    🔭 Comment lire ce graphique ?
+                </div>
+                <div style="font-size: 0.85em; color: #555; line-height: 1.7;">
+                    Chaque point représente un artiste, positionné dans un espace à 3 dimensions 
+                    calculé à partir de l'ensemble de ses paroles. <b>Plus deux artistes sont proches, 
+                    plus leur univers lyrical se ressemble</b> dans les thèmes abordés, le vocabulaire 
+                    utilisé et le style d'écriture.<br><br>
+                    Les trois axes (<i>Composante 1, 2, 3</i>) sont des directions mathématiques abstraites 
+                    qui capturent les principales différences stylistiques entre artistes. Ils n'ont pas 
+                    de nom fixe, ils émergent naturellement des données.<br><br>
+                    <span style="color: #888; font-size: 0.9em;">
+                    💡 Astuce : faites tourner le graphique en cliquant-glissant pour explorer 
+                    les regroupements sous différents angles.
+                    </span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    avail_metrics = [m for m in NLP_FEATURES if m in df.columns]
-    if avail_metrics:
-        metric = metric_selector(avail_metrics, NLP_FEATURES_DISPLAY,
-                                  label="Métrique", key="comp_metric")
-        label  = NLP_FEATURES_DISPLAY.get(metric, metric)
-        st.plotly_chart(artists_compare_bar(df, metric, label), width='stretch')
-    else:
-        st.info("Aucune métrique NLP disponible.")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
-    # ── Scatter positionnement ─────────────────────────────────────────────────
-    st.markdown('<div class="card-title">Positionnement artistique</div>',
-                unsafe_allow_html=True)
-
-    scatter_opts = [m for m in NLP_FEATURES if m in df.columns]
-    if len(scatter_opts) >= 2:
-        sc1, sc2 = st.columns(2, gap="small")
-        with sc1:
-            x_metric = metric_selector(scatter_opts, NLP_FEATURES_DISPLAY,
-                                        label="Axe X", key="scatter_x")
-        with sc2:
-            y_default = scatter_opts[1] if scatter_opts[1] != x_metric else scatter_opts[0]
-            y_metric  = metric_selector(scatter_opts, NLP_FEATURES_DISPLAY,
-                                         label="Axe Y", key="scatter_y")
-
-        palette = ["#1a5c38","#185fa5","#a32d2d","#534ab7","#854f0b","#0f6e56"]
-        fig_sc = go.Figure()
-        for i, (_, row) in enumerate(df.iterrows()):
-            fig_sc.add_trace(go.Scatter(
-                x=[safe_float(row.get(x_metric, 0))],
-                y=[safe_float(row.get(y_metric, 0))],
-                mode="markers+text",
-                name=row.get("artist_name",""),
-                text=[row.get("artist_name","")],
-                textposition="top center",
-                textfont=dict(size=11),
-                marker=dict(size=16, color=palette[i % len(palette)]),
-                showlegend=False,
-            ))
-        fig_sc.update_layout(
-            **_LAYOUT, height=300,
-            xaxis=dict(title=NLP_FEATURES_DISPLAY.get(x_metric, x_metric), gridcolor="#f0f0f0"),
-            yaxis=dict(title=NLP_FEATURES_DISPLAY.get(y_metric, y_metric), gridcolor="#f0f0f0"),
-        )
-        st.plotly_chart(fig_sc, width='stretch')
-    else:
-        st.info("Métriques insuffisantes pour le scatter.")
-    st.markdown('</div>', unsafe_allow_html=True)

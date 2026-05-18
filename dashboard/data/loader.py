@@ -384,3 +384,13 @@ def get_corpus_stats(db_path: Path = DB_PATH) -> dict:
         return r
     except Exception as e:
         return {"total_artists": 0, "total_albums": 0, "total_tracks": 0, "total_words": 0}
+      
+def get_embeddings_all_artists(db_path=DB_PATH):
+    con = _con(db_path)
+    rows = con.execute("""
+        SELECT artist_name, career_embedding_centroid 
+        FROM artists_analysis 
+        WHERE career_embedding_centroid IS NOT NULL
+    """).fetchall()
+    con.close()
+    return rows
