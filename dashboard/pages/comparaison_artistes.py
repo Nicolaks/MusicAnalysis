@@ -10,8 +10,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from data.loader import get_artists_comparison
 from data.transforms import safe_float
-from components.charts import  _LAYOUT, centroid_chart, multi_radar_artists
-from data.loader import get_embeddings_all_artists
+from components.charts import  _LAYOUT, centroid_chart, multi_radar_artists, scatter_ttr_streams_multi
+from data.loader import get_embeddings_all_artists, get_tracks
 from components.filters import multi_artist_selector
 from config import (EMOTION_LABELS, EMOTION_DISPLAY)
 import plotly.graph_objects as go
@@ -150,3 +150,20 @@ def render():
             """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
+    col4 = st.container()
+    
+    with col4:
+        st.markdown('<div class="card-title">Comparaison de la discographie des artistes</div>', unsafe_allow_html=True)
+        
+        tracks_comp = get_tracks(artist_names)
+        stream_col  = next((c for c in ["spotify_total_streams", "streams"]
+                        if c in tracks_comp.columns and tracks_comp[c].notna().any()), None)
+
+        if stream_col and "ttr" in tracks_comp.columns:
+            st.plotly_chart(
+                scatter_ttr_streams_multi(tracks_comp, artist_names, stream_col),
+                use_container_width=True, key="scatter_ttr_multi"
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)

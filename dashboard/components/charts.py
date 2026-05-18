@@ -8,12 +8,13 @@ import plotly.express as px
 import sys, os
 import numpy as np
 import streamlit as st
+from scipy.interpolate import UnivariateSpline
 from data.transforms import safe_float, normalize_radar
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from config import (COLORS, EMOTION_LABELS, EMOTION_DISPLAY, RADAR_KEYS,RADAR_DISPLAY, COLORS, EMOTION_LABELS,
                     EMOTION_DISPLAY, LEXICAL_COLORS, FALLBACK, RADAR_AUDIO_RANGES, RADAR_AUDIO_KEYS, FALLBACK_EMOTION_HEATMAP,
-                    EMOTION_COLORS_HEATMAP, EMOTION_COLORS_RGBA, PALETTE_RADAR_MULTI_ARTISTS)
+                    EMOTION_COLORS_HEATMAP, EMOTION_COLORS_RGBA, PALETTE_RADAR_MULTI_ARTISTS, COLORS_STREAM_TTR_MULTI)
 from sklearn.decomposition import PCA
 
 _LAYOUT = dict(
@@ -883,5 +884,35 @@ def multi_radar_artists(df: pd.DataFrame) -> go.Figure:
         showlegend=True,
         legend=dict(orientation="h", y=-0.18, font=dict(size=10)),
         **_LAYOUT, height=320,
+    )
+    return fig
+
+def scatter_ttr_streams_multi(df: pd.DataFrame, artist_names: list[str], stream_col: str = "streams") -> go.Figure:
+
+    df2 = df[["track_name", "artist_name", "ttr", stream_col]].dropna()
+    if df2.empty:
+        return go.Figure()
+
+    fig = go.Figure()
+    for i, artist in enumerate(artist_names):
+        adf = df2[df2["artist_name"] == artist]
+        if adf.empty:
+            continue
+        color = COLORS_STREAM_TTR_MULTI[i % len(COLORS_STREAM_TTR_MULTI)]
+        fig.add_trace(go.Scatter(
+            x=adf["ttr"],
+            y=adf[stream_col],
+            mode="markers",
+            name=artist,
+            marker=dict(size=7, color=color),
+            text=adf["track_name"],
+            hovertemplate="<b>%{text}</b><br>TTR : %{x:.3f}<br>Streams : %{y:,.0f}<extra></extra>",
+        ))
+    fig.update_layout(
+        **_LAYOUT, height=400,
+        xaxis=dict(title="TTR", gridcolor="#f0f0f0"),
+        yaxis=dict(title="Streams", gridcolor="#f0f0f0",
+                   tickformat=".2s"),
+        legend=dict(orientation="h", y=-0.2, font=dict(size=10)),
     )
     return fig

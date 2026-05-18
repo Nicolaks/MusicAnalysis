@@ -173,28 +173,50 @@ def get_corpus_stats(db_path: Path = DB_PATH) -> pd.Series:
     except Exception:
         return pd.Series(dtype=float)
 
-def get_tracks(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
+def get_tracks(artist_name: str | list[str], db_path: Path = DB_PATH) -> pd.DataFrame:
     try:
         con = _con(db_path)
-        has_kworb   = _table_exists(con, "kworb_streams")
+
+        has_kworb = _table_exists(con, "kworb_streams")
         has_ranking = _table_exists(con, "ranking_data")
 
-        joins, extra_cols = "", "ta.*"
+        joins = ""
+        extra_cols = "ta.*"
+
         if has_kworb:
-            joins      += " LEFT JOIN kworb_streams ks ON ks.track_id = ta.track_id"
+            joins += " LEFT JOIN kworb_streams ks ON ks.track_id = ta.track_id"
             extra_cols += ", ks.streams, ks.daily_streams"
+
         if has_ranking:
-            joins      += " LEFT JOIN ranking_data rd ON rd.track_id = ta.track_id"
+            joins += " LEFT JOIN ranking_data rd ON rd.track_id = ta.track_id"
             extra_cols += ", rd.spotify_total_streams, rd.apple_total, rd.youtube_views"
 
-        df = con.execute(f"""
+        # Gestion string ou liste
+        if isinstance(artist_name, str):
+            artist_names = [artist_name]
+        else:
+            artist_names = artist_name
+
+        # Sécurité si liste vide
+        if not artist_names:
+            return pd.DataFrame()
+
+        # Génère (?, ?, ?, ...)
+        placeholders = ",".join(["?"] * len(artist_names))
+
+        query = f"""
             SELECT {extra_cols}
             FROM tracks_analysis ta
             {joins}
-            WHERE ta.artist_name = ?
-        """, [artist_name]).df()
+            WHERE ta.artist_name IN ({placeholders})
+        """
+
+        df = con.execute(query, artist_names).df()
+
         con.close()
+
         return df
+
     except Exception:
         return pd.DataFrame()
 
@@ -225,7 +247,6 @@ def get_all_tracks(db_path: Path = DB_PATH) -> pd.DataFrame:
         return df
     except Exception:
         return pd.DataFrame()
-
 
 def get_audio_features(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     try:
