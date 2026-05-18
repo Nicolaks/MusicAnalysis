@@ -117,6 +117,7 @@ def aggregate_artist(
             for i in range(n_albums)
             if i * chunk < len(all_embs)
         ])
+        
         if len(album_embs) > 1:
             sim_mat = cosine_similarity(album_embs)
             mask    = np.ones(sim_mat.shape, dtype=bool)
@@ -126,17 +127,11 @@ def aggregate_artist(
             r["inter_album_similarity"] = 1.0
 
         centroid = all_embs.mean(axis=0)
-        if len(all_embs) >= 10:
-            from sklearn.decomposition import PCA
-            pca              = PCA(n_components=10)
-            pca.fit(all_embs)
-            centroid_reduced = pca.transform(centroid.reshape(1, -1))[0]
-        else:
-            centroid_reduced = centroid[:10]
-        r["career_embedding_centroid"] = json.dumps(centroid_reduced.tolist())
+        r["career_embedding_centroid"] = json.dumps(centroid.tolist())
 
     except Exception as e:
-        logger.warning("Embedding artiste échoué : %s", e)
+        import traceback
+        traceback.print_exc()
         r["inter_album_similarity"] = r["career_embedding_centroid"] = None
 
     # ── 4. Stylométrie ────────────────────────────────────────────────────────

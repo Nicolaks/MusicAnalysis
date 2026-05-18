@@ -379,8 +379,15 @@ if __name__ == "__main__":
 # )
           
 #           """)
-    run()
+    #run()
     #delete_artist_from_db(DB_PATH, "Ntmojo")
     #query("SHOW TABLES")
+    # query("""
+    #       SELECT artist_name, AVG(embedding_norm), COUNT(*) 
+    #         FROM tracks_analysis 
+    #         GROUP BY artist_name
+    #         ORDER BY AVG(embedding_norm) ASC
+    #         LIMIT 20 
+    #       """)
     get_audit_csv(True)
     get_db_table_schema()
