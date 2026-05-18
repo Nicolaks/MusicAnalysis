@@ -6,17 +6,14 @@ import sys, os
 import json
 import numpy as np
 
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 from data.loader import get_artists_comparison
-from data.transforms import safe_float, normalize_radar
-from components.charts import artists_compare_bar, _LAYOUT, centroid_chart, multi_radar_artists
-from components.artist_header import artist_header
-from data.loader import get_artist, get_albums, get_tracks, get_artist_url, get_embeddings_all_artists
-from components.filters import artist_selector
-from components.filters import multi_artist_selector, metric_selector
-from config import (NLP_FEATURES, NLP_FEATURES_DISPLAY, RADAR_KEYS,
-                    RADAR_DISPLAY, COLORS, EMOTION_LABELS, EMOTION_DISPLAY)
+from data.transforms import safe_float
+from components.charts import  _LAYOUT, centroid_chart, multi_radar_artists
+from data.loader import get_embeddings_all_artists
+from components.filters import multi_artist_selector
+from config import (EMOTION_LABELS, EMOTION_DISPLAY)
 import plotly.graph_objects as go
 
 

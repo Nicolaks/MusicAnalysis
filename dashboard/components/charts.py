@@ -11,7 +11,9 @@ import streamlit as st
 from data.transforms import safe_float, normalize_radar
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from config import COLORS, EMOTION_LABELS, EMOTION_DISPLAY, RADAR_KEYS,RADAR_DISPLAY, COLORS, EMOTION_LABELS, EMOTION_DISPLAY
+from config import (COLORS, EMOTION_LABELS, EMOTION_DISPLAY, RADAR_KEYS,RADAR_DISPLAY, COLORS, EMOTION_LABELS,
+                    EMOTION_DISPLAY, LEXICAL_COLORS, FALLBACK, RADAR_AUDIO_RANGES, RADAR_AUDIO_KEYS, FALLBACK_EMOTION_HEATMAP,
+                    EMOTION_COLORS_HEATMAP, EMOTION_COLORS_RGBA, PALETTE_RADAR_MULTI_ARTISTS)
 from sklearn.decomposition import PCA
 
 _LAYOUT = dict(
@@ -21,34 +23,11 @@ _LAYOUT = dict(
     margin=dict(l=8, r=8, t=30, b=8),
 )
 
-
 def _apply(fig: go.Figure, height: int = 260, title: str = "") -> go.Figure:
     fig.update_layout(**_LAYOUT, height=height, title=dict(
         text=title, font=dict(size=13, color="#1a1a1a"), x=0, pad=dict(l=0)
     ) if title else None)
     return fig
-
-
-# ── Radar ───────────────────────────────────────────────────────────────────
-
-RADAR_AUDIO_KEYS = {
-    "tempo":          "Rapidité",
-    "beat_strength":  "Puissance",
-    "brightness":     "Brillance",
-    "warmth":         "Chaleur",
-    "roughness":      "Rugosité",
-    "onset_rate":     "Flow",
-}
-
-# Plages réelles pour normalisation absolue (évite l'écrasement sur un seul artiste)
-RADAR_AUDIO_RANGES = {
-    "tempo":         (60,   199),
-    "beat_strength": (1.7,  16.4),
-    "brightness":    (0.007, 0.552),
-    "warmth":        (0.137, 0.709),
-    "roughness":     (0.108, 2.087),
-    "onset_rate":    (0.033, 7.07),
-}
 
 def normalize_radar_audio(values: dict) -> dict:
     """Normalisation sur plages réelles plutôt que min/max local."""
@@ -177,30 +156,6 @@ def emotion_heatmap(df: pd.DataFrame) -> go.Figure:
     if not cols_present or df.empty:
         return go.Figure()
 
-    EMOTION_COLORS = {
-        "joie":        "#2e8a57",
-        "amour":       "#c9687a",
-        "sympathie":   "#cf835c",
-        "tristesse":   "#185fa5",
-        "colère":      "#a32d2d",
-        "peur":        "#534ab7",
-        "surprise":    "#854f0b",
-        "dégoût":      "#0f6e56",
-        "nostalgie":   "#888780",
-        "honte":       "#7d5168",
-        "embarras":    "#da9fa6",
-        "culpabilité": "#4f5d75",
-        "envie":       "#708238",
-        "jalousie":    "#3a4a18",
-        "gratitude":   "#c29946",
-        "indignation": "#bd3a3a",
-        "mépris":      "#5a6b7c",
-        "espoir":      "#3b9ca1",
-        "désespoir":   "#1c2836",
-        "méfiance":    "#6b725c",
-    }
-    FALLBACK = ["#f4a261", "#e76f51", "#264653", "#2a9d8f", "#e9c46a", "#a8dadc", "#457b9d", "#e63946"]
-
     def hex_to_rgb(h):
         h = h.lstrip("#")
         return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
@@ -223,7 +178,7 @@ def emotion_heatmap(df: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
 
     for i, (col, emo_label) in enumerate(zip(cols_present, emotions)):
-        base_color = EMOTION_COLORS.get(col, FALLBACK[i % len(FALLBACK)])
+        base_color = EMOTION_COLORS_HEATMAP.get(col, FALLBACK[i % len(FALLBACK)])
         vals = df[col].fillna(0).values
         vmax = vals.max() if vals.max() > 0 else 1
 
@@ -622,7 +577,7 @@ def emotion_donut_chart(avg_emotion_scores: str | None) -> go.Figure:
     labels = [EMOTION_DISPLAY.get(k, k.capitalize()) for k in scores.keys()]
     values = list(scores.values())
     dominant = labels[0] if labels else ""
-    # Dégradé vert clair → vert foncé selon le rang
+    
     def interpolate_green(i, total):
         t = i / max(total - 1, 1)
         r = int(166 + (26 - 166) * t)   # 166 → 26
@@ -655,37 +610,7 @@ def emotion_donut_chart(avg_emotion_scores: str | None) -> go.Figure:
     )
     return fig
 
-def emotion_lines(df: pd.DataFrame, x_col: str = "album_name") -> go.Figure:
-    import json
-
-    EMOTION_COLORS = {
-        # --- LE TRIO CORRIGÉ & DIFFÉRENCIÉ ---
-        "joie":        "#2e8a57",  # Vert forêt (ton code d'origine)
-        "amour":       "#c9687a",  # Vieux rose / Framboise douce (exit le vert !)
-        "sympathie":   "#cf835c",  # Terracotta / Abricot poudré chaleureux
-        "tristesse":   "#185fa5",  # Bleu franc éteint
-        "colère":      "#a32d2d",  # Rouge brique sombre
-        "peur":        "#534ab7",  # Violet bleuté sourd
-        "surprise":    "#854f0b",  # Ocre / Moutarde foncé
-        "dégoût":      "#0f6e56",  # Vert pin foncé
-        "nostalgie":   "#888780",  # Gris moyen chaud
-        "honte":       "#7d5168",  # Prune / Vieux rose violacé
-        "embarras":    "#da9fa6",  # Rose poudré clair (distinct d'amour)
-        "culpabilité": "#4f5d75",  # Bleu ardoise
-        "envie":       "#708238",  # Vert olive
-        "jalousie":    "#3a4a18",  # Vert armée très sombre
-        "gratitude":   "#c29946",  # Or mat / Ambré
-        "indignation": "#bd3a3a",  # Rouge sang de bœuf (plus vif que la colère)
-        "mépris":      "#5a6b7c",  # Gris acier froid
-        "espoir":      "#3b9ca1",  # Turquoise canard doux
-        "désespoir":   "#1c2836",  # Bleu nuit profond
-        "méfiance":    "#6b725c",  # Kaki grisâtre / Terreux
-    }
-    FALLBACK = [c for c in [
-        "#f4a261", "#e76f51", "#264653", "#2a9d8f",
-        "#e9c46a", "#a8dadc", "#457b9d", "#e63946",
-    ] if c not in EMOTION_COLORS.values()]
-
+def emotion_lines(df: pd.DataFrame, x_col: str = "album_name") -> go.Figure: 
     records = []
     for _, row in df.iterrows():
         raw = row.get("avg_emotion_scores")
@@ -704,13 +629,12 @@ def emotion_lines(df: pd.DataFrame, x_col: str = "album_name") -> go.Figure:
     if not emo_cols:
         return go.Figure()
 
-    # Top 4 émotions sur la moyenne globale de tous les albums
     global_means = emo_df[emo_cols].astype(float).mean()
     top4 = global_means.nlargest(4).index.tolist()
 
     fig = go.Figure()
     for i, col in enumerate(top4):
-        color = EMOTION_COLORS.get(col, FALLBACK[i % len(FALLBACK)])
+        color = EMOTION_COLORS_HEATMAP.get(col, FALLBACK_EMOTION_HEATMAP[i % len(FALLBACK_EMOTION_HEATMAP)])
         fig.add_trace(go.Scatter(
             x=emo_df.index,
             y=emo_df[col].astype(float),
@@ -730,41 +654,7 @@ def emotion_lines(df: pd.DataFrame, x_col: str = "album_name") -> go.Figure:
     return fig
 
 def emotion_stacked_bars(df: pd.DataFrame, x_col: str = "album_name") -> go.Figure:
-    """Répartition émotionnelle par album en barres empilées 100%."""
-    import json
-
-    EMOTION_COLORS = {
-        "joie":        "rgba(46,138,87,0.6)",
-        "amour":       "rgba(201,104,122,0.6)",
-        "sympathie":   "rgba(207,131,92,0.6)",
-        "tristesse":   "rgba(24,95,165,0.6)",
-        "colère":      "rgba(163,45,45,0.6)",
-        "peur":        "rgba(83,74,183,0.6)",
-        "surprise":    "rgba(133,79,11,0.6)",
-        "dégoût":      "rgba(15,110,86,0.6)",
-        "nostalgie":   "rgba(136,135,128,0.6)",
-        "honte":       "rgba(125,81,104,0.6)",
-        "embarras":    "rgba(218,159,166,0.6)",
-        "culpabilité": "rgba(79,93,117,0.6)",
-        "envie":       "rgba(112,130,56,0.6)",
-        "jalousie":    "rgba(58,74,24,0.6)",
-        "gratitude":   "rgba(194,153,70,0.6)",
-        "indignation": "rgba(189,58,58,0.6)",
-        "mépris":      "rgba(90,107,124,0.6)",
-        "espoir":      "rgba(59,156,161,0.6)",
-        "désespoir":   "rgba(28,40,54,0.6)",
-        "méfiance":    "rgba(107,114,92,0.6)",
-    }
-    FALLBACK = [
-        "rgba(244,162,97,0.6)",
-        "rgba(231,111,81,0.6)",
-        "rgba(38,70,83,0.6)",
-        "rgba(42,157,143,0.6)",
-        "rgba(233,196,106,0.6)",
-        "rgba(168,218,220,0.6)",
-        "rgba(69,123,157,0.6)",
-        "rgba(230,57,70,0.6)",
-    ]
+    """Répartition émotionnelle par album en barres empilées 100%."""   
     records = []
     for _, row in df.iterrows():
         raw = row.get("avg_emotion_scores")
@@ -783,7 +673,6 @@ def emotion_stacked_bars(df: pd.DataFrame, x_col: str = "album_name") -> go.Figu
     if not emo_cols:
         return go.Figure()
 
-    # Top 6 émotions globales
     global_means = emo_df[emo_cols].astype(float).mean()
     top_cols = global_means.nlargest(8).index.tolist()
 
@@ -797,8 +686,8 @@ def emotion_stacked_bars(df: pd.DataFrame, x_col: str = "album_name") -> go.Figu
     fig = go.Figure()
     fallback_i = 0
     for col in top_cols:
-        if col in EMOTION_COLORS:
-            color = EMOTION_COLORS[col]
+        if col in EMOTION_COLORS_RGBA:
+            color = EMOTION_COLORS_RGBA[col]
         else:
             color = FALLBACK[fallback_i % len(FALLBACK)]
             fallback_i += 1
@@ -815,7 +704,6 @@ def emotion_stacked_bars(df: pd.DataFrame, x_col: str = "album_name") -> go.Figu
         **_LAYOUT,
         barmode="stack",
         height=550,
-        #xaxis=dict(tickangle=-30, gridcolor="#f0f0f0", tickfont=dict(size=10)),
         xaxis=dict(
                 tickangle=-30,
                 gridcolor="#f0f0f0",
@@ -830,40 +718,9 @@ def emotion_stacked_bars(df: pd.DataFrame, x_col: str = "album_name") -> go.Figu
     return fig
 
 def lexical_area(df):
-    import json
-
-    LEXICAL_COLORS = {
-        "argent":       "rgba(133,79,11,0.35)",
-        "rue":          "rgba(26,92,56,0.35)",
-        "famille":      "rgba(24,95,165,0.35)",
-        "drogue":       "rgba(83,74,183,0.35)",
-        "célébrité":    "rgba(136,135,128,0.35)",
-        "spiritualité": "rgba(15,110,86,0.35)",
-        "amour_perdu":  "rgba(163,45,45,0.35)",
-        "violence":     "rgba(163,45,45,0.35)",
-        "succès":       "rgba(46,138,87,0.35)",
-        "échec":        "rgba(24,95,165,0.35)",
-        "liberté":      "rgba(93,191,138,0.35)",
-        "prison":       "rgba(83,74,183,0.35)",
-        "mort":         "rgba(26,92,56,0.35)",
-        "fête":         "rgba(133,79,11,0.35)",
-        "sport":        "rgba(15,110,86,0.35)",
-        "mode":         "rgba(136,135,128,0.35)",
-        "voitures":     "rgba(133,79,11,0.35)",
-    }
-    FALLBACK = [
-        "rgba(244,162,97,0.35)",
-        "rgba(231,111,81,0.35)",
-        "rgba(38,70,83,0.35)",
-        "rgba(42,157,143,0.35)",
-        "rgba(233,196,106,0.35)",
-        "rgba(168,218,220,0.35)",
-    ]
-
     if "avg_lexical_field_scores" not in df.columns:
         return go.Figure()
 
-    # Parse JSON par album
     records = []
     for _, row in df.iterrows():
         raw = row.get("avg_lexical_field_scores")
@@ -881,8 +738,7 @@ def lexical_area(df):
 
     if not lex_cols:
         return go.Figure()
-
-    # Top 4 champs lexicaux globaux
+    
     global_means = lex_df[lex_cols].astype(float).mean()
     top4 = global_means.nlargest(8).index.tolist()
 
@@ -921,7 +777,6 @@ def lexical_area(df):
 
 def centroid_chart(names: list[str], embs: np.ndarray, selected: list[str] = None) -> go.Figure:
     selected = selected or []
-    
     pca = PCA(n_components=3)
     coords = pca.fit_transform(embs)
 
@@ -930,7 +785,6 @@ def centroid_chart(names: list[str], embs: np.ndarray, selected: list[str] = Non
 
     fig = go.Figure()
 
-    # Artistes non sélectionnés — quasi invisibles pour garder le contexte spatial
     mask_others = np.array([n not in selected for n in names])
     fig.add_trace(go.Scatter3d(
         x=coords[mask_others, 0],
@@ -943,7 +797,6 @@ def centroid_chart(names: list[str], embs: np.ndarray, selected: list[str] = Non
         showlegend=False,
     ))
 
-    # Artistes sélectionnés mis en valeur
     for i, artist in enumerate(selected):
         if artist not in names:
             continue
@@ -1006,28 +859,6 @@ def centroid_chart(names: list[str], embs: np.ndarray, selected: list[str] = Non
     return fig
 
 def multi_radar_artists(df: pd.DataFrame) -> go.Figure:
-    palette = [
-        ("rgba(26,92,56,1)",     "rgba(26,92,56,0.15)"),
-        ("rgba(24,95,165,1)",    "rgba(24,95,165,0.15)"),
-        ("rgba(163,45,45,1)",    "rgba(163,45,45,0.15)"),
-        ("rgba(83,74,183,1)",    "rgba(83,74,183,0.15)"),
-        ("rgba(133,79,11,1)",    "rgba(133,79,11,0.15)"),
-        ("rgba(15,110,86,1)",    "rgba(15,110,86,0.15)"),
-        ("rgba(201,104,122,1)",  "rgba(201,104,122,0.15)"),
-        ("rgba(207,131,92,1)",   "rgba(207,131,92,0.15)"),
-        ("rgba(59,156,161,1)",   "rgba(59,156,161,0.15)"),
-        ("rgba(125,81,104,1)",   "rgba(125,81,104,0.15)"),
-        ("rgba(112,130,56,1)",   "rgba(112,130,56,0.15)"),
-        ("rgba(194,153,70,1)",   "rgba(194,153,70,0.15)"),
-        ("rgba(79,93,117,1)",    "rgba(79,93,117,0.15)"),
-        ("rgba(189,58,58,1)",    "rgba(189,58,58,0.15)"),
-        ("rgba(90,107,124,1)",   "rgba(90,107,124,0.15)"),
-        ("rgba(107,114,92,1)",   "rgba(107,114,92,0.15)"),
-        ("rgba(244,162,97,1)",   "rgba(244,162,97,0.15)"),
-        ("rgba(42,157,143,1)",   "rgba(42,157,143,0.15)"),
-        ("rgba(69,123,157,1)",   "rgba(69,123,157,0.15)"),
-        ("rgba(218,159,166,1)",  "rgba(218,159,166,0.15)"),
-    ]
     fig = go.Figure()
     for i, (_, row) in enumerate(df.iterrows()):
         raw   = {RADAR_DISPLAY[k]: safe_float(row.get(k, 0)) for k in RADAR_KEYS if k in row.index}
@@ -1036,7 +867,7 @@ def multi_radar_artists(df: pd.DataFrame) -> go.Figure:
             continue
         cats  = list(normd.keys()) + [list(normd.keys())[0]]
         vals  = list(normd.values()) + [list(normd.values())[0]]
-        line_color, fill_color = palette[i % len(palette)]
+        line_color, fill_color = PALETTE_RADAR_MULTI_ARTISTS[i % len(PALETTE_RADAR_MULTI_ARTISTS)]
         fig.add_trace(go.Scatterpolar(
             r=vals, theta=cats, name=row.get("artist_name", f"Artiste {i}"),
             fill="toself",

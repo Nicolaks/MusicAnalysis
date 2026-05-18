@@ -20,7 +20,6 @@ from pages import (
     analyse_chansons,
     comparaison_artistes,
 )
-
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Music NLP Dashboard",
