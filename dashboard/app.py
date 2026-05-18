@@ -19,7 +19,6 @@ from pages import (
     evolution_carriere,
     analyse_chansons,
     comparaison_artistes,
-    nlp_audio,
 )
 
 # ── Page config ───────────────────────────────────────────────────────────────
@@ -47,7 +46,6 @@ PAGES = {
     "evolution":    ("📅 Évolution carrière",   evolution_carriere),
     "chansons":     ("🎵 Analyse chansons",     analyse_chansons),
     "comparaison":  ("📊 Comparaison artistes", comparaison_artistes),
-    "nlp_audio":    ("🔊 NLP × Audio",          nlp_audio),
 }
 
 if "page" not in st.session_state:
