@@ -117,7 +117,7 @@ def render():
         fig_centroid = centroid_chart(names, embs, selected=artist_names)
         
         if fig_centroid.data:
-            st.plotly_chart(fig_centroid, use_container_width="stretch", key="Centroid 3D")
+            st.plotly_chart(fig_centroid, width="stretch", key="Centroid 3D")
         else:
             st.error("Informations indisponibles pour les artistes sélectionnés")
             
@@ -162,7 +162,7 @@ def render():
         if stream_col and "ttr" in tracks_comp.columns:
             st.plotly_chart(
                 scatter_ttr_streams_multi(tracks_comp, artist_names, stream_col),
-                use_container_width="stretch", key="scatter_ttr_multi"
+                width="stretch", key="scatter_ttr_multi"
             )
             st.markdown('</div>', unsafe_allow_html=True)
         

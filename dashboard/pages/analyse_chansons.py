@@ -110,7 +110,7 @@ def render():
                 xaxis=dict(showgrid=False, visible=False),
                 yaxis=dict(tickfont=dict(size=10)),
             )
-            st.plotly_chart(fig_albums, use_container_width="stretch")
+            st.plotly_chart(fig_albums, width="stretch")
         else:
             st.info("Données streams absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -172,7 +172,7 @@ def render():
                     neg = sum(v for k, v in emo_parsed.items() if k in neg_keys)
                     neu = max(0, 1 - pos - neg)
                     st.caption("Tonalité")
-                    st.plotly_chart(sentiment_donut(pos, neu, neg), use_container_width="stretch")
+                    st.plotly_chart(sentiment_donut(pos, neu, neg), width="stretch")
                 except Exception:
                     st.info("Sentiment absent.")
             else:
@@ -227,7 +227,7 @@ def render():
                             legend=dict(orientation="v", x=1.02, font=dict(size=9)),
                             showlegend=True,
                         )
-                        st.plotly_chart(fig, use_container_width="stretch")
+                        st.plotly_chart(fig, width="stretch")
                     else:
                         st.info("Émotions absentes.")
                 except Exception:
@@ -308,7 +308,7 @@ def render():
                             legend=dict(orientation="v", x=1.02, font=dict(size=9)),
                             showlegend=True,
                         )
-                        st.plotly_chart(fig3, use_container_width="stretch")
+                        st.plotly_chart(fig3, width="stretch")
                     else:
                         st.info("Champs lexicaux absents.")
                 except Exception:

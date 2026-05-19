@@ -84,7 +84,7 @@ def render():
         st.markdown('<div class="card-title">Évolution des 4 émotions dominantes de l\'artiste par album</div>', unsafe_allow_html=True)
         has_emo = "avg_emotion_scores" in albums.columns and albums["avg_emotion_scores"].notna().any()
         if has_emo:
-            st.plotly_chart(emotion_lines(albums), use_container_width='stretch')
+            st.plotly_chart(emotion_lines(albums), width='stretch')
         else:
             st.info("Données émotions absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -104,7 +104,7 @@ def render():
                 unsafe_allow_html=True)
     has_emo = "avg_emotion_scores" in albums.columns and albums["avg_emotion_scores"].notna().any()
     if has_emo:
-        st.plotly_chart(emotion_stacked_bars(albums), use_container_width='stretch')
+        st.plotly_chart(emotion_stacked_bars(albums), width='stretch')
     else:
         st.info("Colonnes émotions absentes.")
     st.markdown('</div>', unsafe_allow_html=True)
