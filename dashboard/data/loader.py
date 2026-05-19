@@ -4,6 +4,8 @@ import duckdb
 import pandas as pd
 from functools import lru_cache
 from pathlib import Path
+from collections import defaultdict
+import json as _json
 import sys
 import os
 
@@ -38,19 +40,14 @@ def get_artists(db_path: Path = DB_PATH) -> list[str]:
 def get_artist_url(artist_name: str, db_path: Path = DB_PATH) -> str | None:
     try:
         con = _con(db_path)
-        df = con.execute(
-            "SELECT artist_image_url FROM tracks_flat WHERE artist_name = ?",
+        row = con.execute(
+            "SELECT artist_image_url FROM tracks_flat WHERE artist_name = ? LIMIT 1",
             [artist_name]
-        ).df()
+        ).fetchone()
         con.close()
-
-        if df.empty:
-            return None
-
-        return df.iloc[0]["artist_image_url"]
-
+        return row[0] if row else None
     except Exception:
-        return None
+            return None
 
 def get_audio_radar(artist_name: str, db_path: Path = DB_PATH) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
@@ -114,64 +111,49 @@ def get_albums(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
     
-def get_streams_artist(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
+def get_streams_artist(artist_name: str, db_path: Path = DB_PATH) -> int:
     try:
         con = _con(db_path)
-        has_streams = _table_exists(con, "kworb_streams")
-        print(f"has_kworb={has_streams}")
-        df = con.execute("""
-                        SELECT SUM(streams) as streams FROM kworb_streams WHERE artist_name = ? 
-                         """, [artist_name]).df()
-        print(f"Streams de {artist_name}{df.get("streams")}")
+        if not _table_exists(con, "kworb_streams"):
+            con.close()
+            return None
+        row = con.execute(
+            "SELECT SUM(streams) FROM kworb_streams WHERE artist_name = ?",
+            [artist_name]
+        ).fetchone()
         con.close()
-        return df
+        return row[0] if row else 0
     except Exception as e:
         print(f"ERREUR: {e}")
-        return pd.DataFrame()
+        return 0
 
 def get_albums_with_streams(artist_name: str, db_path: Path = DB_PATH) -> pd.DataFrame:
     try:
         con = _con(db_path)
-        has_kworb   = _table_exists(con, "kworb_streams")
-        has_ranking = _table_exists(con, "ranking_data")
-        print(f"has_kworb={has_kworb}, has_ranking={has_ranking}")
-        
-        # Test simple d'abord
-        df = con.execute("""
-            SELECT * FROM albums_analysis WHERE artist_name = ?
-        """, [artist_name]).df()
-        print(f"albums_analysis rows: {len(df)}")
+        has_kworb = _table_exists(con, "kworb_streams")
+
+        if has_kworb:
+            df = con.execute("""
+                SELECT aa.*, SUM(ks.streams) AS total_streams
+                FROM albums_analysis aa
+                LEFT JOIN tracks_analysis ta ON ta.album_id = aa.album_id
+                LEFT JOIN kworb_streams ks   ON ks.track_id = ta.track_id
+                WHERE aa.artist_name = ?
+                GROUP BY ALL
+                ORDER BY aa.release_year NULLS LAST, aa.album_name
+            """, [artist_name]).df()
+        else:
+            df = con.execute("""
+                SELECT * FROM albums_analysis
+                WHERE artist_name = ?
+                ORDER BY release_year NULLS LAST, album_name
+            """, [artist_name]).df()
+
         con.close()
         return df
     except Exception as e:
         print(f"ERREUR: {e}")
         return pd.DataFrame()
-    
-def get_corpus_stats(db_path: Path = DB_PATH) -> pd.Series:
-    try:
-        con = _con(db_path)
-        df = con.execute("""
-            SELECT 
-                MIN(avg_word_count) as wc_min, MAX(avg_word_count) as wc_max,
-                AVG(avg_word_count) as wc_avg,
-                MIN(avg_ttr) as ttr_min, MAX(avg_ttr) as ttr_max,
-                AVG(avg_ttr) as ttr_avg,
-                MIN(avg_rhyme_density) as rhyme_min, MAX(avg_rhyme_density) as rhyme_max,
-                AVG(avg_rhyme_density) as rhyme_avg,
-                MIN(avg_hapax_ratio) as hapax_min, MAX(avg_hapax_ratio) as hapax_max,
-                AVG(avg_hapax_ratio) as hapax_avg,
-                MIN(avg_pronoun_i_ratio) as i_min, MAX(avg_pronoun_i_ratio) as i_max,
-                AVG(avg_pronoun_i_ratio) as i_avg,
-                MIN(avg_repetition_ratio) as rep_min, MAX(avg_repetition_ratio) as rep_max,
-                AVG(avg_repetition_ratio) as rep_avg,
-                MIN(avg_word_length) as wl_min, MAX(avg_word_length) as wl_max,
-                AVG(avg_word_length) as wl_avg
-            FROM artists_analysis
-        """).df()
-        con.close()
-        return df.iloc[0]
-    except Exception:
-        return pd.Series(dtype=float)
 
 def get_tracks(artist_name: str | list[str], db_path: Path = DB_PATH) -> pd.DataFrame:
     try:
@@ -298,14 +280,13 @@ def get_artists_comparison(artist_names: list[str], db_path: Path = DB_PATH) -> 
         con = _con(db_path)
         placeholders = ", ".join(["?"] * len(artist_names))
         has_kworb = _table_exists(con, "kworb_streams")
+
         stream_join = ""
         stream_col  = "NULL AS total_streams"
         if has_kworb:
             stream_join = """
                 LEFT JOIN tracks_analysis ta2 ON ta2.artist_id = aa.artist_id
-                LEFT JOIN kworb_streams ks ON ks.track_id = ta2.track_id
-                LEFT JOIN tracks_flat tf ON tf.track_id = ta2.track_id
-                    AND (tf.is_canonical IS NULL OR tf.is_canonical = TRUE)
+                LEFT JOIN kworb_streams ks     ON ks.track_id  = ta2.track_id
             """
             stream_col = "SUM(DISTINCT ks.streams) AS total_streams"
 
@@ -316,8 +297,9 @@ def get_artists_comparison(artist_names: list[str], db_path: Path = DB_PATH) -> 
             WHERE aa.artist_name IN ({placeholders})
             GROUP BY ALL
         """, artist_names).df()
+        con.close()
         return df
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
     
 def get_corpus_year_range(db_path: Path = DB_PATH) -> dict:
@@ -339,14 +321,21 @@ def get_corpus_stats(db_path: Path = DB_PATH) -> dict:
     try:
         con = _con(db_path)
         r = {}
-        r["total_artists"] = con.execute("SELECT COUNT(*) FROM artists_analysis").fetchone()[0]
-        r["total_albums"]  = con.execute("SELECT COUNT(*) FROM albums_analysis").fetchone()[0]
-        r["total_tracks"]  = con.execute("SELECT COUNT(*) FROM tracks_analysis").fetchone()[0]
-        r["total_words"]   = con.execute(
-            "SELECT COALESCE(SUM(word_count),0) FROM tracks_analysis"
-        ).fetchone()[0]
 
-                # Stats pour les métriques stylométriques de portrait_artiste
+        # ── 1. Comptages globaux : 1 seule requête ──────────────────────
+        counts = con.execute("""
+            SELECT
+                (SELECT COUNT(*) FROM artists_analysis) AS total_artists,
+                (SELECT COUNT(*) FROM albums_analysis)  AS total_albums,
+                (SELECT COUNT(*) FROM tracks_analysis)  AS total_tracks,
+                (SELECT COALESCE(SUM(word_count), 0) FROM tracks_analysis) AS total_words
+        """).fetchone()
+        r["total_artists"] = counts[0]
+        r["total_albums"]  = counts[1]
+        r["total_tracks"]  = counts[2]
+        r["total_words"]   = counts[3]
+
+        # ── 2. Stats stylo : 1 seule requête, 1 seul scan ───────────────
         stylo_metrics = [
             "avg_pos_noun_ratio",
             "avg_pos_verb_ratio",
@@ -366,29 +355,36 @@ def get_corpus_stats(db_path: Path = DB_PATH) -> dict:
             "avg_lexical_diversity",
             "avg_hapax_ratio",
         ]
+
+        # Génère MIN, MAX, AVG, MEDIAN pour chaque colonne en une passe
+        select_parts = []
         for col in stylo_metrics:
-            row = con.execute(f"""
-                SELECT MIN({col}), MAX({col}), AVG({col}),
-                       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {col})
-                FROM artists_analysis
-                WHERE {col} IS NOT NULL
-            """).fetchone()
-            r[f"{col}_min"]    = row[0] or 0
-            r[f"{col}_max"]    = row[1] or 1
-            r[f"{col}_avg"]    = row[2] or 0
-            r[f"{col}_median"] = row[3] or 0
-            
-        # Moyenne des champs lexicaux
+            select_parts.append(f"""
+                MIN({col})                                              AS {col}_min,
+                MAX({col})                                              AS {col}_max,
+                AVG({col})                                             AS {col}_avg,
+                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {col})    AS {col}_median
+            """)
+        stylo_sql = f"SELECT {', '.join(select_parts)} FROM artists_analysis"
+        stylo_row = con.execute(stylo_sql).fetchone()
+
+        # Réassemble dans r[] avec les mêmes clés qu'avant
+        for i, col in enumerate(stylo_metrics):
+            base = i * 4
+            r[f"{col}_min"]    = stylo_row[base]     or 0
+            r[f"{col}_max"]    = stylo_row[base + 1] or 1
+            r[f"{col}_avg"]    = stylo_row[base + 2] or 0
+            r[f"{col}_median"] = stylo_row[base + 3] or 0
+
+        # ── 3. Champs lexicaux : inchangé (dépend de JSON applicatif) ───
         rows_lex = con.execute("""
             SELECT avg_lexical_field_scores
             FROM artists_analysis
             WHERE avg_lexical_field_scores IS NOT NULL
         """).fetchall()
 
-        from collections import defaultdict
-        import json as _json
         lex_totals = defaultdict(float)
-        lex_count = 0
+        lex_count  = 0
         for (val,) in rows_lex:
             try:
                 parsed = _json.loads(val) if isinstance(val, str) else val
@@ -398,11 +394,13 @@ def get_corpus_stats(db_path: Path = DB_PATH) -> dict:
                     lex_count += 1
             except Exception:
                 pass
-        r["avg_lexical_fields"] = {k: v / lex_count for k, v in lex_totals.items()} if lex_count else {}
+        r["avg_lexical_fields"] = (
+            {k: v / lex_count for k, v in lex_totals.items()} if lex_count else {}
+        )
 
         con.close()
-
         return r
+
     except Exception as e:
         return {"total_artists": 0, "total_albums": 0, "total_tracks": 0, "total_words": 0}
       
