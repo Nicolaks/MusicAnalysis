@@ -253,10 +253,7 @@ if page_key == "dashboard":
                 yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-4, 4]),
             )
             st.plotly_chart(fig_wc, width="stretch")
-            st.markdown("""
-                        Ce **nuage de mots** met en évidence les termes les plus fréquents dans le corpus des chansons des artistes, offrant une vue d’ensemble de leurs univers.
-                        """)
-        
+            
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Radar moyen corpus + activité ─────────────────────────────────────────
@@ -306,10 +303,7 @@ if page_key == "dashboard":
             else:
                 st.info("Colonnes émotions absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("""
-                        Le graphique présente la distribution des différentes émotions à travers le corpus analysé.
-                        """)
-        
+
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     col_scatter = st.container()
@@ -353,7 +347,7 @@ if page_key == "dashboard":
                 fig_sc.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
-                    height=380,
+                    height=450,
                     margin=dict(l=8, r=8, t=8, b=8),
                     font=dict(family="DM Sans", size=11),
                     xaxis=dict(title="TTR (richesse vocabulaire)", gridcolor="#f0f0f0", type="linear"),
@@ -366,9 +360,6 @@ if page_key == "dashboard":
         else:
             st.info("Colonnes streams ou TTR absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("""
-                    Dans ce graphique, on compare le nombre total de **streams** d’un artiste avec le **TTR moyen de ses chansons** afin de pouvoir effectuer des comparaisons entre artistes.
-                    """)
 
 else:
     _, module = PAGES[page_key]
