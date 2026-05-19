@@ -8,8 +8,8 @@ import plotly.express as px
 import sys, os
 import numpy as np
 import streamlit as st
-from scipy.interpolate import UnivariateSpline
 from data.transforms import safe_float, normalize_radar
+from sklearn.linear_model import LinearRegression
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from config import (COLORS, EMOTION_LABELS, EMOTION_DISPLAY, RADAR_KEYS,RADAR_DISPLAY, COLORS, EMOTION_LABELS,
@@ -861,34 +861,66 @@ def centroid_chart(names: list[str], embs: np.ndarray, selected: list[str] = Non
 
 def multi_radar_artists(df: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
+    
+    # 1. Calculer la valeur maximale pour chaque métrique à travers tous les artistes
+    # Cela permet de normaliser chaque axe indépendamment pour que le max soit à 1.
+    max_vals = {}
+    for k in RADAR_KEYS:
+        if k in df.columns:
+            # On gère les cas où la colonne pourrait être vide ou à 0
+            max_val = df[k].astype(float).max()
+            max_vals[k] = max_val if max_val > 0 else 1.0
+
     for i, (_, row) in enumerate(df.iterrows()):
-        raw   = {RADAR_DISPLAY[k]: safe_float(row.get(k, 0)) for k in RADAR_KEYS if k in row.index}
-        normd = normalize_radar(raw) if raw else {}
-        if not normd:
+        cats = []
+        vals = []
+        real_vals = [] # Pour garder une trace des valeurs originales au survol
+        
+        # 2. Construire les valeurs normalisées pour l'artiste courant
+        for k in RADAR_KEYS:
+            if k in row.index:
+                raw_val = safe_float(row.get(k, 0))
+                norm_val = raw_val / max_vals[k] # Normalisation : Valeur / Max de la colonne
+                
+                cats.append(RADAR_DISPLAY.get(k, k))
+                vals.append(norm_val)
+                real_vals.append(raw_val)
+                
+        if not cats:
             continue
-        cats  = list(normd.keys()) + [list(normd.keys())[0]]
-        vals  = list(normd.values()) + [list(normd.values())[0]]
+            
+        # Boucler les listes pour fermer le polygone du radar
+        cats = cats + [cats[0]]
+        vals = vals + [vals[0]]
+        real_vals = real_vals + [real_vals[0]]
+
         line_color, fill_color = PALETTE_RADAR_MULTI_ARTISTS[i % len(PALETTE_RADAR_MULTI_ARTISTS)]
+        
+        # 3. Ajout de la trace avec un hovertemplate personnalisé
         fig.add_trace(go.Scatterpolar(
-            r=vals, theta=cats, name=row.get("artist_name", f"Artiste {i}"),
+            r=vals, 
+            theta=cats, 
+            name=row.get("artist_name", f"Artiste {i}"),
             fill="toself",
             line=dict(color=line_color, width=2),
             fillcolor=fill_color,
+            customdata=real_vals,
+            # Le hovertemplate montre la vraie valeur, pas juste la valeur normalisée (0 à 1)
+            hovertemplate="<b>%{theta}</b><br>Valeur brute: %{customdata:.3f}<br>Score relatif: %{r:.2f}<extra></extra>"
         ))
+
     fig.update_layout(
         polar=dict(
+            # On garde range=[0, 1] car nos valeurs sont maintenant des pourcentages du max
             radialaxis=dict(visible=True, range=[0,1], tickfont=dict(size=9), gridcolor="#eee"),
             angularaxis=dict(tickfont=dict(size=10, color="#555")),
             bgcolor="rgba(0,0,0,0)",
         ),
         showlegend=True,
         legend=dict(orientation="h", y=-0.18, font=dict(size=10)),
-        **_LAYOUT, height=320,
+        **_LAYOUT, height=400,
     )
     return fig
-
-import numpy as np
-from sklearn.linear_model import LinearRegression  # ou scipy
 
 def scatter_ttr_streams_multi(df: pd.DataFrame, artist_names: list[str], stream_col: str = "streams") -> go.Figure:
 

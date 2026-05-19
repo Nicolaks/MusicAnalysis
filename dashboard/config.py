@@ -71,12 +71,12 @@ AUDIO_FEATURES_DISPLAY = {
 }
 
 RADAR_KEYS = [
-    "avg_rhyme_density",
     "avg_ttr",
     "avg_semantic_density",
     "avg_pronoun_i_ratio",
     "avg_pos_verb_ratio",
     "avg_hapax_ratio",
+    "inter_album_similarity"
 ]
 RADAR_DISPLAY = {
     "avg_rhyme_density":    "Rimes",
@@ -85,6 +85,10 @@ RADAR_DISPLAY = {
     "avg_pronoun_i_ratio":  "Auto-réf.",
     "avg_pos_verb_ratio":   "Verbes",
     "avg_hapax_ratio":      "Hapax",
+    "avg_rhyme_density":      "Densité rimes",
+    "avg_lexical_diversity" : "Diversité lexicale moyenne",
+    "avg_word_length" :       "Longueur moyenne d'un mot",
+    "inter_album_similarity": "Similarité inter-album",
 }
 
 LEXICAL_FIELD_DISPLAY = {
