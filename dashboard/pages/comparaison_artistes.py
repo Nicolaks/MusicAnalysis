@@ -166,4 +166,19 @@ def render():
             )
             st.markdown('</div>', unsafe_allow_html=True)
         
+        with st.expander("Comprendre ce graphique ?"):
+            st.markdown("""
+                        Chaque point représente un titre musical, positionné selon deux dimensions : 
+                        
+                        - le **TTR** (Type-Token Ratio) en abscisse, qui mesure la richesse lexicale du texte, plus il est élevé, plus les paroles utilisent de mots variés. 
+                        
+                        - et le **nombre de streams** en ordonnée, en échelle logarithmique (chaque grande graduation représente 10 fois plus d'écoutes que la précédente). 
+                         
+                        La couleur identifie l'artiste. Les lignes pointillées sont des régressions qui résument la tendance générale de chaque artiste : ici, elles descendent
+                        toutes vers la droite, ce qui suggère que les titres au lexique plus riche ont tendance à être moins streamés. 
+                        
+                        Cette relation n'est pas une causalité, un TTR élevé ne provoque pas moins d'écoutes,
+                        mais elle reflète probablement un style plus exigeant, moins orienté vers les formats radio ou les refrains répétitifs qui favorisent la viralité.
+                        """)
+        
         st.markdown('</div>', unsafe_allow_html=True)

@@ -887,32 +887,73 @@ def multi_radar_artists(df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
+import numpy as np
+from sklearn.linear_model import LinearRegression  # ou scipy
+
 def scatter_ttr_streams_multi(df: pd.DataFrame, artist_names: list[str], stream_col: str = "streams") -> go.Figure:
 
     df2 = df[["track_name", "artist_name", "ttr", stream_col]].dropna()
+    df2 = df2[df2[stream_col] > 0]
     if df2.empty:
         return go.Figure()
 
     fig = go.Figure()
+
     for i, artist in enumerate(artist_names):
-        adf = df2[df2["artist_name"] == artist]
+        adf = df2[df2["artist_name"] == artist].copy()
         if adf.empty:
             continue
+
         color = COLORS_STREAM_TTR_MULTI[i % len(COLORS_STREAM_TTR_MULTI)]
         fig.add_trace(go.Scatter(
             x=adf["ttr"],
             y=adf[stream_col],
             mode="markers",
             name=artist,
-            marker=dict(size=7, color=color),
+            marker=dict(
+                size=9,
+                color=color,
+                opacity=0.55,                
+                line=dict(width=0.5, color="white"),
+            ),
             text=adf["track_name"],
             hovertemplate="<b>%{text}</b><br>TTR : %{x:.3f}<br>Streams : %{y:,.0f}<extra></extra>",
         ))
+
+        if len(adf) >= 3:
+            x_vals = adf["ttr"].values.reshape(-1, 1)
+            y_log  = np.log10(adf[stream_col].values)
+            model  = LinearRegression().fit(x_vals, y_log)
+            x_range = np.linspace(adf["ttr"].min(), adf["ttr"].max(), 100)
+            y_pred  = 10 ** model.predict(x_range.reshape(-1, 1))
+
+            fig.add_trace(go.Scatter(
+                x=x_range,
+                y=y_pred,
+                mode="lines",
+                line=dict(color=color, width=2, dash="dash"),
+                showlegend=False,
+                hoverinfo="skip",
+            ))
+
     fig.update_layout(
-        **_LAYOUT, height=400,
-        xaxis=dict(title="TTR", gridcolor="#f0f0f0"),
-        yaxis=dict(title="Streams", gridcolor="#f0f0f0",
-                   tickformat=".2s"),
-        legend=dict(orientation="h", y=-0.2, font=dict(size=10)),
+        **_LAYOUT, height=450,
+        xaxis=dict(
+            title="TTR",
+            gridcolor="#ebebeb",
+            range=[0.1, 1.0],
+        ),
+        yaxis=dict(
+            title="Streams",
+            type="log",                        
+            gridcolor="#ebebeb",
+            tickvals=[1e3, 1e4, 1e5, 1e6, 1e7, 1e8],
+            ticktext=["1K", "10K", "100K", "1M", "10M", "100M"],
+        ),
+        legend=dict(
+            orientation="h",
+            y=1.08, x=0.5, xanchor="center",
+            font=dict(size=11),
+        ),
     )
     return fig
