@@ -447,7 +447,7 @@ def sentiment_donut(pos: float, neu: float, neg: float) -> go.Figure:
 
     fig.update_layout(
         **layout,
-        height=200,
+        height=250,
         legend=dict(orientation="h", y=-0.15, font=dict(size=10)),
         annotations=[dict(
             text=f"{pos:.0%}",
