@@ -28,6 +28,14 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+st.markdown("""
+    <style>
+        [data-testid="stSidebarCollapseButton"] {
+            display: none;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 hide_pages = """
 <style>
 [data-testid="stSidebarNav"] {display: none;}

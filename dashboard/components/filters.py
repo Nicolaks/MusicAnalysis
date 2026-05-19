@@ -9,12 +9,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from data.loader import get_artists
 
 
-def artist_selector(key="artist"):
+def artist_selector(key="artist", location=None):
     artists_raw = get_artists()
     artists_display = [ARTIST_DISPLAY_NAMES.get(a, a) for a in artists_raw]
-    
-    selected_display = st.sidebar.selectbox("Artiste", artists_display, key=key)
-    # Retourne le nom original pour les requêtes BDD
+
+    # Utilise le contexte courant (sidebar ou page) selon l'appelant
+    container = location if location else st
+    selected_display = container.selectbox("Artiste", artists_display, key=key)
     return ARTIST_DISPLAY_NAMES_INV.get(selected_display, selected_display)
 
 
