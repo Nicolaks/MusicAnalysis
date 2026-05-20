@@ -136,6 +136,20 @@ def render():
         else:
             st.info("Données insuffisantes pour le scatter.")
         st.markdown('</div>', unsafe_allow_html=True)
+        
+        with st.expander("Que nous dit ce graphique ?"):
+            st.markdown("""
+                **Richesse lexicale vs Streams: par titre**  
+                Ce nuage de points explore la relation entre la diversité du vocabulaire et le succès d'écoute, titre par titre.
+
+                - **Chaque point représente un titre** de la discographie. Sa position horizontale indique sa richesse lexicale (TTR), sa position verticale son nombre de streams.
+                - **L'axe horizontal (TTR)** va de 0 à 1 : un point vers la droite signifie que le titre utilise un vocabulaire très varié, un point vers la gauche indique un texte plus répétitif ou formulaïque.
+                - **L'axe vertical (Streams)** mesure la popularité du titre : plus un point est haut, plus le morceau a été écouté.
+                - **La concentration des points en bas du graphique** est normale : la grande majorité des titres d'une discographie restent sous les radars, tandis que quelques titres seulement décrochent des scores d'écoute très élevés.
+
+                Ce graphique pose une question simple mais révélatrice : **les titres les plus travaillés lexicalement sont-ils aussi les plus écoutés ?**  
+                La dispersion des points permet de voir si les succès commerciaux de l'artiste correspondent à ses textes les plus riches ou, au contraire, à ses titres les plus accessibles et répétitifs, une tension classique entre exigence artistique et attractivité populaire.
+            """)
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
@@ -315,3 +329,22 @@ def render():
                     st.info("Champs lexicaux absents.")
             else:
                 st.info("Champs lexicaux absents.")
+                
+    with st.expander("Comment lire ce tableau de bord ?"):
+        st.markdown("""
+            **Analyse détaillée d'une chanson**  
+            Ce tableau de bord concentre en une seule vue toutes les dimensions analytiques d'un titre : structure, émotions et thématiques.
+
+            **Les 4 métriques en haut de page**
+            - **Mots** : le nombre total de mots dans le titre, reflet de la densité d'écriture.
+            - **TTR** : la richesse lexicale du titre, plus il est proche de 1, plus chaque mot est unique et le texte peu répétitif.
+            - **Rimes/ligne** : le nombre moyen de rimes par ligne, indicateur de la construction prosodique et du soin apporté à la sonorité.
+            - **Syl./ligne** : le nombre moyen de syllabes par ligne, qui renseigne sur le débit et la densité phonétique du texte.
+
+            **Les 3 visualisations**
+            - **Tonalité** (anneau gauche) : répartition globale du texte entre sentiment positif, négatif et neutre. La majorité des mots dans une chanson sont neutres ; c'est l'équilibre entre positif et négatif qui révèle la couleur émotionnelle dominante.
+            - **Profil émotionnel** (barre centrale) : décomposition des émotions détectées dans le titre, empilées par intensité. Elle précise la nature des sentiments là où la tonalité se contente de les polariser.
+            - **Champs lexicaux** (anneau droit) : répartition des grandes thématiques abordées dans le titre. Le champ mis en avant au centre est celui qui domine l'ensemble du texte.
+
+            Combinés, ces éléments permettent d'obtenir une **radiographie complète d'un titre** : au-delà de ce qu'on ressent à l'écoute, ils révèlent objectivement ce dont parle la chanson, comment elle est construite et quelle émotion elle cherche à transmettre.
+        """)

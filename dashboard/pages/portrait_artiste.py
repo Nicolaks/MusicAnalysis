@@ -50,7 +50,8 @@ def render():
     with col1:
         st.markdown('<div class="card-title">Carte d\'identité</div>', unsafe_allow_html=True)
         st.plotly_chart(identity_card_chart(artist, corpus), width='stretch')
-        with st.expander("Comprendre les métriques"):
+
+        with st.expander("Comment interpréter la carte d'identité ?"):
             st.markdown("""
             - **Mots / chanson** :  
             `≈ 50 → 2000+`  
@@ -63,7 +64,6 @@ def render():
             le TTR est de 0,20. 
             Plus ce chiffre est élevé, plus le vocabulaire est varié. 
             
-
             - **Rimes** :  
             `0 → +∞`  
             Fréquence moyenne des rimes par phrase. Indique le niveau de travail phonique.
@@ -100,6 +100,23 @@ def render():
         else:
             st.info("Données lexicales absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
+        with st.expander("Comment lire ce graphique ?"):
+            st.markdown("""
+                    **Champs lexicaux**  
+                    Ce graphique décompose les paroles de l'artiste en grandes thématiques pour révéler les univers qui structurent son écriture.
+
+                    - **Chaque barre correspond à un champ lexical** : un ensemble de mots gravitant autour d'un même thème (famille, rue, argent, violence…). 
+                    
+                    - **La longueur de la barre et le pourcentage associé** indiquent la part que représente ce thème dans l'ensemble du vocabulaire utilisé : plus la barre est longue, plus ce champ lexical est central dans les paroles. 
+                    
+                    - **La barre mise en évidence** correspond au thème dominant, celui qui pèse le plus lourd dans l'identité lyricale de l'artiste. 
+                    
+                    - **Les pourcentages sont calculés** sur la fréquence des mots appartenant à chaque champ lexical, rapportée au volume total de mots analysés. 
+                    
+
+                    Cette visualisation permet de cerner les **obsessions thématiques** d'un artiste : quels sont les univers qu'il convoque le plus souvent, ce qui façonne son identité et son positionnement artistique.  
+                    Elle offre une lecture objective de ce dont parle vraiment un artiste, au-delà des impressions, et permet de suivre comment ces thématiques évoluent d'un album à l'autre.
+                """)
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
@@ -192,13 +209,17 @@ def render():
         
     with st.expander("Comment lire la carte émotionnelle ?"):
         st.markdown("""
-                    ### Carte émotionnelle de la discographie
+        **Évolution des émotions par album**  
+        Ce graphique matriciel croise les émotions détectées avec la discographie de l'artiste pour visualiser comment sa palette émotionnelle évolue dans le temps.
 
-                    La carte émotionnelle représente l’intensité des émotions détectées dans les paroles de chaque album. 
-                    Les émotions (joie, tristesse, colère, peur, surprise, dégoût) sont affichées sur l’axe vertical et les albums sur l’axe horizontal.  
-                    Plus la taille de la bulle est importante, plus l’émotion est présente dans l’album concerné.  
-                    Cette visualisation permet d’identifier rapidement les émotions dominantes, les variations d’ambiance et l’évolution émotionnelle de l’artiste au fil de sa carrière.
-        """)
+        - **Chaque ligne correspond à une émotion**, chaque colonne à un album classé chronologiquement de gauche à droite.
+        - **La taille de chaque bulle** traduit l'intensité de l'émotion dans l'album concerné : une grande bulle signifie que cette émotion est fortement présente dans les paroles, une petite bulle qu'elle n'est qu'effleurée.
+        - **La couleur de chaque bulle** est propre à chaque émotion, ce qui permet de suivre visuellement une ligne horizontale et de repérer d'un coup d'œil les albums où elle culmine ou s'efface.
+        - **Une bulle très pâle ou absente** indique que l'émotion correspondante est quasi inexistante dans cet album.
+
+        Ce graphique est particulièrement puissant pour observer les **ruptures et continuités émotionnelles** dans une carrière.  
+        Il permet de détecter des tournants artistiques. Un album où la colère cède la place à l'espoir, ou inversement, et de comprendre comment l'artiste fait évoluer sa tonalité au fil du temps, révélant ainsi une forme de **maturité ou de transformation intérieure** à travers son œuvre.
+    """)
         st.markdown('</div>', unsafe_allow_html=True)
      
     # ── Star chart        ──────────────────────────────────────────────────────   

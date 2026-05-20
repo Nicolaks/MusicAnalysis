@@ -262,6 +262,17 @@ if page_key == "dashboard":
             )
             st.plotly_chart(fig_wc, width="stretch")
             
+    with st.expander("Comment lire ce graphique ?"):
+        st.markdown("""
+            **Nuage de mots: Mots les plus fréquents du corpus global**  
+            Ce graphique représente les mots les plus utilisés sur l'ensemble de la discographie analysée.
+            
+            - **La taille de chaque mot** est proportionnelle à sa fréquence d'apparition dans les textes : plus un mot est grand, plus il revient souvent dans les paroles.
+            - **La position** des mots n'a pas de signification particulière, elle est générée aléatoirement pour optimiser la lisibilité.
+            - **La densité du nuage** donne une première impression du champ lexical dominant : on peut ainsi identifier rapidement les thèmes récurrents (émotions, lieux, relations, valeurs…).
+            
+        """)
+            
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Radar moyen corpus + activité ─────────────────────────────────────────
@@ -311,6 +322,16 @@ if page_key == "dashboard":
             else:
                 st.info("Colonnes émotions absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.markdown("""
+            **Distribution des émotions: Corpus global**  
+            Ce graphique représente la répartition des émotions détectées sur l'ensemble des paroles analysées.
+
+            - **Chaque barre correspond à une émotion** identifiée automatiquement dans les textes grâce à une analyse sémantique.
+            - **La hauteur de la barre** reflète le score moyen de cette émotion sur l'ensemble du corpus : plus la barre est haute, plus cette émotion est présente et récurrente dans les paroles.
+            - **Les valeurs affichées** au-dessus de chaque barre sont des scores normalisés (entre 0 et 1), ce qui permet de comparer les émotions entre elles indépendamment du volume de texte analysé.
+            - **L'ordre décroissant** permet de lire d'un seul coup d'œil quelles émotions dominent l'univers lyrical, des plus présentes aux plus rares.
+        """)
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
@@ -367,7 +388,23 @@ if page_key == "dashboard":
                 st.info("Données insuffisantes.")
         else:
             st.info("Colonnes streams ou TTR absentes.")
-        st.markdown('</div>', unsafe_allow_html=True)
+            
+    st.markdown("""
+        **Corrélation streams × richesse vocabulaire (TTR)**  
+        Ce graphique met en relation la popularité musicale et la richesse du vocabulaire pour chaque artiste du corpus.
+
+        - **L'axe horizontal (X)** représente le TTR (*Type-Token Ratio*), un indicateur de richesse lexicale : plus un artiste est positionné à droite, plus son vocabulaire est varié et diversifié.
+        - **L'axe vertical (Y)** représente le nombre total de streams Spotify : plus un artiste est positionné en haut, plus il est populaire en termes d'écoutes.
+        - **La taille de chaque bulle** est proportionnelle au volume total de streams : une grande bulle indique un artiste très écouté, une petite bulle un artiste avec une audience plus confidentielle.
+        - **Chaque point représente un artiste** du corpus, permettant de comparer l'ensemble des profils en un seul coup d'œil.
+
+        Ce graphique permet d'explorer une question centrale : **la richesse du vocabulaire influence-t-elle le succès commercial ?**  
+        Il met en lumière la diversité des trajectoires artistiques : certains artistes cumulent grande popularité et vocabulaire riche, d'autres connaissent un fort succès avec un lexique plus resserré, et inversement.  
+        Il n'existe pas de corrélation mécanique entre les deux axes, ce qui illustre que **la performance commerciale et l'exigence lyricale sont deux dimensions indépendantes** du hip/hop et du rap, chacune révélatrice d'une approche artistique différente.
+    """)
+        
+    st.markdown('</div>', unsafe_allow_html=True)
+        
 
 else:
     _, module = PAGES[page_key]

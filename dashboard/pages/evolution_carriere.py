@@ -89,6 +89,20 @@ def render():
             st.info("Données émotions absentes.")
         st.markdown('</div>', unsafe_allow_html=True)
         
+        with st.expander("Que nous dit ce graphique ?"):
+            st.markdown("""
+                **Évolution des 4 émotions dominantes par album**  
+                Ce graphique suit dans le temps l'intensité des quatre émotions les plus caractéristiques de l'artiste, album après album.
+
+                - **Chaque ligne représente une émotion**, identifiable par sa couleur dans la légende en bas du graphique.
+                - **L'axe horizontal** liste les albums dans l'ordre chronologique, de la première à la dernière sortie.
+                - **L'axe vertical** indique le score moyen de chaque émotion pour l'album correspondant : plus la ligne est haute, plus cette émotion est intensément présente dans les paroles.
+                - **Les croisements et écarts entre les lignes** sont particulièrement révélateurs : quand les courbes se resserrent, les émotions s'équilibrent ; quand elles s'écartent, une émotion prend clairement le dessus sur les autres.
+                - **Les chutes ou pics brutaux** sur un album signalent un changement de registre fort, potentiellement lié à un événement de vie ou une rupture artistique volontaire.
+
+                C'est l'un des graphiques les plus riches pour comprendre la **trajectoire émotionnelle** d'un artiste sur l'ensemble de sa carrière : il permet de voir si la tonalité s'assombrit ou s'éclaircit avec le temps, si certaines émotions disparaissent progressivement, et si des cycles se répètent d'un projet à l'autre.
+            """)
+        
     col2 = st.container()
 
     with col2:
@@ -98,18 +112,47 @@ def render():
         st.markdown('</div>', unsafe_allow_html=True)
     st.info("💡 Glissez la barre ci-dessus pour naviguer dans la discographie.")
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    
+    with st.expander("Comment lire cette analyse ?"):
+        st.markdown("""
+                **Évolution de la richesse lexicale au fil des albums**  
+                Ce graphique suit deux indicateurs complémentaires sur l'ensemble de la discographie pour mesurer l'évolution du vocabulaire de l'artiste.
+
+                - **La courbe foncée: Vocabulaire album** (axe gauche) indique le nombre total de mots distincts utilisés dans chaque album. Elle est sensible à la taille du projet : un album avec plus de titres aura mécaniquement un score plus élevé.
+                - **La courbe claire: TTR** (axe droit) mesure le *Type-Token Ratio*, c'est-à-dire le rapport entre les mots uniques et le nombre total de mots. Cet indicateur est indépendant de la longueur de l'album : un TTR élevé signifie que l'artiste répète peu ses mots et diversifie son expression.
+                - **Les deux axes sont distincts** : il ne faut pas comparer les valeurs absolues des deux courbes, mais observer leurs tendances respectives et leurs éventuels décalages.
+                - **La barre de navigation en bas** permet de zoomer sur une période précise de la discographie pour affiner la lecture.
+
+                L'intérêt de croiser ces deux métriques est de distinguer la **quantité** de vocabulaire de sa **qualité** : un artiste peut écrire beaucoup tout en se répétant, ou au contraire produire des projets courts mais lexicalement très denses. Les écarts entre les deux courbes révèlent ces nuances et permettent de repérer les albums où l'écriture gagne/perd en richesse réelle.
+            """)
 
     # ── Heatmap émotions ──────────────────────────────────────────────────────
-    st.markdown('<div class="card-title">Barre émotionnelle (8 émotions principales) : album par album</div>',
-                unsafe_allow_html=True)
-    has_emo = "avg_emotion_scores" in albums.columns and albums["avg_emotion_scores"].notna().any()
-    if has_emo:
-        st.plotly_chart(emotion_stacked_bars(albums), width='stretch')
-    else:
-        st.info("Colonnes émotions absentes.")
-    st.markdown('</div>', unsafe_allow_html=True)
+    colEmo = st.container()
+    
+    with colEmo:
+        st.markdown('<div class="card-title">Barre émotionnelle (8 émotions principales) : album par album</div>',
+                    unsafe_allow_html=True)
+        has_emo = "avg_emotion_scores" in albums.columns and albums["avg_emotion_scores"].notna().any()
+        if has_emo:
+            st.plotly_chart(emotion_stacked_bars(albums), width='stretch')
+        else:
+            st.info("Colonnes émotions absentes.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+        
+        with st.expander("Décryptage de cette visualisation"):
+            st.markdown("""
+                **Barre émotionnelle des 8 émotions principales par album**  
+                Ce graphique en barres empilées donne une photographie complète de la composition émotionnelle de chaque album.
+
+                - **Chaque barre représente un album**, classé chronologiquement de gauche à droite, et atteint toujours 100% : elle ne mesure pas l'intensité absolue des émotions, mais leur **poids relatif les unes par rapport aux autres** au sein de ce projet.
+                - **Chaque segment coloré** correspond à une émotion identifiable via la légende en bas. Sa hauteur indique la part qu'elle occupe dans l'ensemble émotionnel de l'album.
+                - **La lecture verticale** d'une barre permet de saisir en un instant la palette émotionnelle d'un album : est-il dominé par une seule émotion ou réparti équitablement entre plusieurs ?
+                - **La lecture horizontale**, en comparant les barres entre elles, permet de repérer les glissements de tonalité d'un projet à l'autre : un segment qui grandit ou rétrécit au fil du temps trahit une évolution dans l'écriture.
+
+                Ce graphique est complémentaire aux courbes d'évolution : là où ces dernières montrent l'intensité, la barre émotionnelle révèle les **équilibres internes** de chaque album. Elle permet de comprendre si un artiste s'ancre dans un registre émotionnel stable ou si chaque projet propose une configuration affective différente, signe d'une écriture en constante transformation.
+            """)
 
     # ── Champs lexicaux + Lisibilité ──────────────────────────────────────────
     col3 = st.container()
@@ -121,6 +164,19 @@ def render():
         st.markdown('</div>', unsafe_allow_html=True)
         
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    
+    with st.expander("Mode d'emploi de ce graphique"):
+        st.markdown("""
+                **Évolution des champs lexicaux par album**  
+                Ce graphique en aires empilées retrace la présence de chaque grande thématique dans les paroles, album après album.
+
+                - **Chaque couche colorée correspond à un champ lexical**, identifiable via la légende en bas. L'ordre d'empilement est constant d'un album à l'autre, ce qui facilite la comparaison visuelle dans le temps.
+                - **L'épaisseur de chaque couche** reflète le poids de ce champ lexical dans l'album : une couche qui s'élargit signifie que la thématique prend plus de place dans les paroles, une couche qui se réduit indique qu'elle s'efface.
+                - **La hauteur totale de la pile** varie d'un album à l'autre et reflète la densité thématique globale du projet : un pic vers le haut signale un album particulièrement chargé en références à ces univers.
+                - **Les ondulations de la surface** sont le signe de fluctuations thématiques : l'écriture n'est jamais figée, certains sujets reviennent par vagues, d'autres s'installent progressivement ou disparaissent.
+
+                Ce graphique permet de lire la **trajectoire narrative** d'un artiste sur le long terme. Il révèle si certains thèmes sont des constantes de son écriture ou des passages, si des ruptures thématiques coïncident avec des moments charnières de sa carrière, et comment l'ensemble de ses préoccupations se réorganise d'un projet à l'autre.
+            """)
 
     col4 = st.container()
 

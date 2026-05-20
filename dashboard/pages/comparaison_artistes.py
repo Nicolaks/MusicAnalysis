@@ -67,6 +67,27 @@ def render():
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
     
+    with st.expander("Comprendre ce graphique"):
+        st.markdown("""
+            **Signature stylistique comparée**  
+            Ce graphique radar synthétise en une seule forme visuelle le profil stylistique de chaque artiste sélectionné, sur six dimensions d'écriture simultanément.
+
+            **Les 6 axes analysés**
+            - **Sémantique** : la richesse du champ lexical, la diversité des univers thématiques convoqués.
+            - **TTR** : le ratio de mots uniques sur le total des mots, mesure de la variété du vocabulaire.
+            - **Similarité inter-album** : le degré de cohérence stylistique entre les albums ; un score élevé indique un univers musical homogène, un score faible une forte évolution d'un projet à l'autre.
+            - **Hapax** : la proportion de mots n'apparaissant qu'une seule fois dans l'ensemble de la discographie, signe d'un vocabulaire rare et inventif.
+            - **Verbes** : la densité verbale du texte, qui reflète le dynamisme narratif et le rythme de l'écriture.
+            - **Auto-réf.** : la fréquence des références à soi-même dans les paroles, indicateur du niveau d'introspection ou d'ego dans l'écriture.
+
+            **Lire les formes**
+            - **Plus la surface d'un artiste est grande**, plus son profil stylistique est développé sur l'ensemble des dimensions.
+            - **Une forme déséquilibrée** avec des pointes sur certains axes révèle une écriture avec des spécialités marquées et des dimensions moins travaillées.
+            - **La superposition des formes** permet de comparer instantanément les forces et faiblesses stylistiques de chaque artiste : là où les contours se chevauchent, les profils convergent ; là où ils divergent, les identités s'affirment.
+
+            C'est le graphique le plus synthétique de l'analyse : il offre une **empreinte stylistique unique** pour chaque artiste et permet de comprendre en un coup d'œil ce qui le distingue fondamentalement des autres dans sa manière d'écrire.
+        """)
+        
     col3 = st.container()
     
     with col3:
